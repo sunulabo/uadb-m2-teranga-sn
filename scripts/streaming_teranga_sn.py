@@ -37,6 +37,10 @@ LEXIQUE = {
     'beautiful': 0.80, 'paradise': 0.90, 'stunning': 0.85,
     # Positif Wolof
     'dafa baax': 0.90, 'rafet': 0.80, 'baax': 0.85, 'yomb': 0.70,
+    'neex': 0.80, 'dafa neex': 0.85, 'dafa rafet': 0.85,
+    'yomb na': 0.75, 'fi neex': 0.80, 'bari nit': 0.60,
+    'jaam': 0.70, 'dafa baax lool': 0.95, 'ak yaakaar': 0.65,
+    'benn probleme': 0.50, 'am na solo': 0.75,
     # Negatif FR
     'decevant': -0.70, 'arnaque': -0.90, 'sale': -0.80,
     'dechets': -0.70, 'cher': -0.50, 'insatisfait': -0.75,
@@ -46,6 +50,9 @@ LEXIQUE = {
     'dirty': -0.80, 'rude': -0.75,
     # Negatif Wolof
     'dafa neka': -0.80, 'amul solo': -0.70,
+    'dafa bon': -0.80, 'metti': -0.65, 'dafa metti': -0.75,
+    'xamul': -0.55, 'toorop cher': -0.60, 'dafa daw': -0.50,
+    'amul barke': -0.65, 'loolu amul yaram': -0.80,
 }
 
 

@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template encoding-version="1.4">
+    <description>Teranga-SN Eq.12 - Ingestion NiFi vers Kafka (avis + e-commerce)</description>
+    <groupId>teranga-eq12-flow</groupId>
+    <name>template_nifi_eq12</name>
+    <snippet>
+        <processGroups>
+            <id>teranga-process-group</id>
+            <name>Teranga-SN Ingestion Pipeline</name>
+            <position>
+                <x>100</x>
+                <y>100</y>
+            </position>
+        </processGroups>
+
+        <!-- Processor 1 : Generateur d avis touristiques JSON -->
+        <processors>
+            <id>gen-avis-01</id>
+            <parentGroupId>teranga-process-group</parentGroupId>
+            <position><x>200</x><y>200</y></position>
+            <bundle>
+                <group>org.apache.nifi</group>
+                <artifact>nifi-standard-nar</artifact>
+                <version>1.23.2</version>
+            </bundle>
+            <config>
+                <bulletinLevel>WARN</bulletinLevel>
+                <comment>Simule les avis touristiques depuis DGTT et plateformes</comment>
+                <schedulingPeriod>5 sec</schedulingPeriod>
+                <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+                <properties>
+                    <entry>
+                        <key>File Size</key>
+                        <value>0 B</value>
+                    </entry>
+                    <entry>
+                        <key>Batch Size</key>
+                        <value>1</value>
+                    </entry>
+                    <entry>
+                        <key>Custom Text</key>
+                        <value><![CDATA[{
+  "avis_id": "${UUID()}",
+  "user_id": "usr_${random():mod(9999)}",
+  "email_client": "user${random():mod(999)}@example.com",
+  "destination": "${getStateValue('destinations'):replaceFirst('.*', 'DAKAR')}",
+  "type_activite": "hotel",
+  "nationalite": "FR",
+  "note": ${random():mod(5):plus(1)}.0,
+  "texte_avis": "Sejour magnifique, teranga incroyable !",
+  "langue": "FR",
+  "plateforme": "TripAdvisor",
+  "timestamp": "${now():format('yyyy-MM-dd HH:mm:ss')}"
+}]]></value>
+                    </entry>
+                    <entry>
+                        <key>Unique FlowFiles</key>
+                        <value>true</value>
+                    </entry>
+                </properties>
+            </config>
+            <name>GenerateFlowFile - Avis</name>
+            <type>org.apache.nifi.processors.standard.GenerateFlowFile</type>
+        </processors>
+
+        <!-- Processor 2 : Generateur de transactions e-commerce -->
+        <processors>
+            <id>gen-ecomm-01</id>
+            <parentGroupId>teranga-process-group</parentGroupId>
+            <position><x>200</x><y>400</y></position>
+            <bundle>
+                <group>org.apache.nifi</group>
+                <artifact>nifi-standard-nar</artifact>
+                <version>1.23.2</version>
+            </bundle>
+            <config>
+                <bulletinLevel>WARN</bulletinLevel>
+                <comment>Simule les transactions e-commerce Jumia/Senmarket/Expat-Dakar</comment>
+                <schedulingPeriod>3 sec</schedulingPeriod>
+                <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+                <properties>
+                    <entry>
+                        <key>Custom Text</key>
+                        <value><![CDATA[{
+  "transaction_id": "txn_${UUID()}",
+  "user_id": "usr_${random():mod(9999)}",
+  "categorie": "ALIMENTATION",
+  "montant_fcfa": ${random():mod(50000):plus(5000)}.0,
+  "region_livraison": "DAKAR",
+  "plateforme": "Jumia",
+  "timestamp": "${now():format('yyyy-MM-dd HH:mm:ss')}"
+}]]></value>
+                    </entry>
+                    <entry>
+                        <key>Unique FlowFiles</key>
+                        <value>true</value>
+                    </entry>
+                </properties>
+            </config>
+            <name>GenerateFlowFile - Ecommerce</name>
+            <type>org.apache.nifi.processors.standard.GenerateFlowFile</type>
+        </processors>
+
+        <!-- Processor 3 : Publication vers Kafka topic avis -->
+        <processors>
+            <id>kafka-avis-01</id>
+            <parentGroupId>teranga-process-group</parentGroupId>
+            <position><x>500</x><y>200</y></position>
+            <bundle>
+                <group>org.apache.nifi</group>
+                <artifact>nifi-kafka-2-6-nar</artifact>
+                <version>1.23.2</version>
+            </bundle>
+            <config>
+                <bulletinLevel>WARN</bulletinLevel>
+                <comment>Envoie les avis vers le topic Kafka teranga_avis_raw</comment>
+                <schedulingPeriod>0 sec</schedulingPeriod>
+                <schedulingStrategy>EVENT_DRIVEN</schedulingStrategy>
+                <properties>
+                    <entry>
+                        <key>bootstrap.servers</key>
+                        <value>kafka:9092</value>
+                    </entry>
+                    <entry>
+                        <key>topic</key>
+                        <value>teranga_avis_raw</value>
+                    </entry>
+                    <entry>
+                        <key>Delivery Guarantee</key>
+                        <value>Best Effort</value>
+                    </entry>
+                    <entry>
+                        <key>Request Maximum Message Size</key>
+                        <value>1 MB</value>
+                    </entry>
+                    <entry>
+                        <key>Compress codec</key>
+                        <value>none</value>
+                    </entry>
+                    <entry>
+                        <key>Client Name</key>
+                        <value>teranga-nifi-producer</value>
+                    </entry>
+                </properties>
+            </config>
+            <name>PublishKafka - teranga_avis_raw</name>
+            <type>org.apache.nifi.processors.kafka.pubsub.PublishKafka_2_6</type>
+        </processors>
+
+        <!-- Processor 4 : Publication vers Kafka topic e-commerce -->
+        <processors>
+            <id>kafka-ecomm-01</id>
+            <parentGroupId>teranga-process-group</parentGroupId>
+            <position><x>500</x><y>400</y></position>
+            <bundle>
+                <group>org.apache.nifi</group>
+                <artifact>nifi-kafka-2-6-nar</artifact>
+                <version>1.23.2</version>
+            </bundle>
+            <config>
+                <bulletinLevel>WARN</bulletinLevel>
+                <comment>Envoie les transactions vers le topic Kafka teranga_arrivees_raw</comment>
+                <schedulingPeriod>0 sec</schedulingPeriod>
+                <schedulingStrategy>EVENT_DRIVEN</schedulingStrategy>
+                <properties>
+                    <entry>
+                        <key>bootstrap.servers</key>
+                        <value>kafka:9092</value>
+                    </entry>
+                    <entry>
+                        <key>topic</key>
+                        <value>teranga_arrivees_raw</value>
+                    </entry>
+                    <entry>
+                        <key>Delivery Guarantee</key>
+                        <value>Best Effort</value>
+                    </entry>
+                    <entry>
+                        <key>Request Maximum Message Size</key>
+                        <value>1 MB</value>
+                    </entry>
+                    <entry>
+                        <key>Client Name</key>
+                        <value>teranga-nifi-producer</value>
+                    </entry>
+                </properties>
+            </config>
+            <name>PublishKafka - teranga_arrivees_raw</name>
+            <type>org.apache.nifi.processors.kafka.pubsub.PublishKafka_2_6</type>
+        </processors>
+
+        <!-- Connexions -->
+        <connections>
+            <id>conn-avis-kafka</id>
+            <name>Avis vers Kafka</name>
+            <sourceId>gen-avis-01</sourceId>
+            <sourceRelationships>
+                <relationship>success</relationship>
+            </sourceRelationships>
+            <destinationId>kafka-avis-01</destinationId>
+        </connections>
+        <connections>
+            <id>conn-ecomm-kafka</id>
+            <name>Ecommerce vers Kafka</name>
+            <sourceId>gen-ecomm-01</sourceId>
+            <sourceRelationships>
+                <relationship>success</relationship>
+            </sourceRelationships>
+            <destinationId>kafka-ecomm-01</destinationId>
+        </connections>
+        <connections>
+            <id>conn-kafka-avis-failure</id>
+            <name>Echec publication avis</name>
+            <sourceId>kafka-avis-01</sourceId>
+            <sourceRelationships>
+                <relationship>failure</relationship>
+            </sourceRelationships>
+            <destinationId>gen-avis-01</destinationId>
+            <labelIndex>1</labelIndex>
+        </connections>
+        <connections>
+            <id>conn-kafka-ecomm-failure</id>
+            <name>Echec publication ecommerce</name>
+            <sourceId>kafka-ecomm-01</sourceId>
+            <sourceRelationships>
+                <relationship>failure</relationship>
+            </sourceRelationships>
+            <destinationId>gen-ecomm-01</destinationId>
+            <labelIndex>1</labelIndex>
+        </connections>
+    </snippet>
+    <timestamp>2026-05-06T00:00:00+00:00</timestamp>
+</template>

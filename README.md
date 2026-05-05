@@ -71,9 +71,9 @@ python dashboard/dashboard_teranga_sn.py
 
 | Métrique | Valeur |
 |----------|--------|
-| RMSE     | *à documenter après entraînement* |
-| R²       | *à documenter après entraînement* |
-| CV R²    | *à documenter après entraînement* |
+| RMSE     | 31.23  |
+| R²       | 0.90   |
+| CV R²    | 0.8989 |
 
 ## Structure du dépôt
 
@@ -91,9 +91,8 @@ dashboard/
 docker/
   docker-compose.yml             # Infrastructure complète
 nifi_templates/
-  template_nifi_eq12.xml         # Template NiFi exporté
-rapport/
-  rapport.pdf                    # Rapport final
+  template_nifi_eq12.xml         # Template NiFi (4 processors, 2 topics)
+rapport_teranga_sn.docx          # Rapport final Word
 hive_setup.sql                   # Tables et vues Hive
 requirements.txt
 README.md
