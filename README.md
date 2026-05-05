@@ -84,6 +84,7 @@ scripts/
   hbase_setup.py                 # Création tables HBase
   streaming_teranga_sn.py        # Pipeline Spark Streaming NLP
   train_flux_model.py            # Entraînement Random Forest + MLflow
+  exploration_rapide.py          # Exploration initiale des données
 dags/
   teranga_sn_dag.py              # DAG Airflow MLOps hebdomadaire
 dashboard/
@@ -92,6 +93,13 @@ docker/
   docker-compose.yml             # Infrastructure complète
 nifi_templates/
   template_nifi_eq12.xml         # Template NiFi (4 processors, 2 topics)
+tests/
+  test_schemas.py                # 10 tests Pandera (schemas + PII)
+  test_streaming.py              # Tests unitaires scoring NLP
+models/
+  metriques_rf.json              # Métriques Random Forest (RMSE, R², CV R²)
+.github/workflows/
+  ci.yml                         # CI GitHub Actions (pytest automatique)
 rapport_teranga_sn.docx          # Rapport final Word
 hive_setup.sql                   # Tables et vues Hive
 requirements.txt

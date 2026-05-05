@@ -1,0 +1,27 @@
+name: Teranga-SN CI
+
+on:
+  push:
+    branches: [main, dev-papamalick, dev-abdoussalam]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pandera pandas pytest
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short

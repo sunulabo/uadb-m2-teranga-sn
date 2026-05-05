@@ -3,5 +3,8 @@
   "r2": 0.9005,
   "cv_r2": 0.8989,
   "n_train": 4000,
-  "n_test": 1000
+  "n_test": 1000,
+  "n_estimators": 150,
+  "max_depth": 10,
+  "date_entrainement": "2026-05-05T22:14:37"
 }
