@@ -14,7 +14,7 @@
 ## Architecture
 
 ```
-[ SOURCES ]  ──►  [ NiFi ]  ──►  [ KAFKA ]  ──►  [ SPARK NLP ]  ──►  [ STORAGE ]
+[ SOURCES ]  -->  [ NiFi ]  -->  [ KAFKA ]  -->  [ SPARK NLP ]  -->  [ STORAGE ]
   Avis/Reviews   Ingestion    teranga_avis_raw   Sentiment FR/EN/WO   HBase/Hive
   DGTT arrivées  & Routage    teranga_arrivees    Prédiction flux       Gold Layer
   Jumia/Ecomm                                          │
