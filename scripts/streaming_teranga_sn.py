@@ -10,7 +10,7 @@ from pyspark.sql.functions import (
     sum as spark_sum,
 )
 from pyspark.sql.types import (
-    StructType, StructField, StringType, FloatType, TimestampType
+    StructType, StructField, StringType, FloatType
 )
 
 # Configuration generale
@@ -40,11 +40,10 @@ LEXIQUE = {
     'neex': 0.80, 'dafa neex': 0.85, 'dafa rafet': 0.85,
     'yomb na': 0.75, 'fi neex': 0.80, 'bari nit': 0.60,
     'jaam': 0.70, 'dafa baax lool': 0.95, 'ak yaakaar': 0.65,
-    'benn probleme': 0.50, 'am na solo': 0.75,
+    'benn probleme': 0.50, 'am na solo': 0.75, 'professionnel': 0.60,
     # Negatif FR
     'decevant': -0.70, 'arnaque': -0.90, 'sale': -0.80,
     'dechets': -0.70, 'cher': -0.50, 'insatisfait': -0.75,
-    'professionnel': 0.60,
     # Negatif EN
     'disappointed': -0.70, 'overpriced': -0.60, 'touts': -0.50,
     'dirty': -0.80, 'rude': -0.75,
@@ -128,7 +127,7 @@ reputation_df = (
         'destination',
     )
     .agg(
-        avg(coalesce('note', lit(3.0))).alias('note_moy'),
+        avg(coalesce(col('note'), lit(3.0))).alias('note_moy'),
         avg('sentiment_score').alias('sentiment_moy'),
         count('avis_id').alias('nb_avis'),
         spark_sum(when(col('sentiment_label') == 'POSITIF', 1).otherwise(0)).alias('nb_positif'),

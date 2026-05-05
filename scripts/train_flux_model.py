@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error, r2_score
 
+import joblib
 import mlflow
 import mlflow.sklearn
 
@@ -129,7 +130,6 @@ def entrainer_modele():
         mlflow.sklearn.log_model(rf, 'rf_flux_model')
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
 
-        import joblib
         joblib.dump({'model': rf, 'encodeurs': encodeurs, 'features': features},
                     MODEL_PATH)
         logger.info(f'Modele sauvegarde : {MODEL_PATH}')

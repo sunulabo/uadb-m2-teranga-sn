@@ -51,7 +51,7 @@ def retrain_model(**ctx):
     logger.info(f'Reentainement declenche - {n_rouge} destinations ROUGE')
     subprocess.run(
         ['spark-submit', '--master', 'spark://spark-master:7077',
-         '/opt/models/train_flux_model.py'],
+         '/opt/airflow/scripts/train_flux_model.py'],
         check=True,
         timeout=3600,
     )
@@ -79,7 +79,7 @@ def update_dashboard(**ctx):
         rows = cur.fetchall()
         cur.close(); conn_hive.close()
 
-        table = conn_hbase.table(b'teranga:alertes_reputation')
+        table = conn_hbase.table('teranga:alertes_reputation')
         ts    = datetime.utcnow().isoformat().encode()
 
         for dest, nb, note, sent, statut in rows:

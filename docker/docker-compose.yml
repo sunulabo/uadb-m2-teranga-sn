@@ -153,6 +153,7 @@ services:
       TERANGA_SECRET_SALT: ${TERANGA_SECRET_SALT:-teranga_salt_uadb_2025}
     volumes:
       - ../dags:/opt/airflow/dags
+      - ../scripts:/opt/airflow/scripts
       - ../models:/opt/models
       - airflow-logs:/opt/airflow/logs
     command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname Teranga --role Admin --email admin@teranga.sn ; airflow webserver & airflow scheduler"
