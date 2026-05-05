@@ -1,6 +1,6 @@
 # tests/test_schemas.py
-# Tests unitaires Pandera — Teranga-SN Eq.12
-# J'ai ajouté ces tests après avoir eu un bug de PII qui passait sans se faire détecter
+# Tests unitaires Pandera - Teranga-SN Eq.12
+# J'ai ajoute ces tests apres avoir eu un bug de PII qui passait sans se faire detecter
 
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
@@ -11,7 +11,7 @@ from schema_pandera import schema_avis, schema_ecommerce, valider_avis, valider_
 import pandera as pa
 
 
-# ── Tests schéma avis ─────────────────────────────────────────────────────────
+# Tests schema avis
 
 def df_avis_valide():
     return pd.DataFrame([{
@@ -32,7 +32,7 @@ def test_avis_valide():
 
 
 def test_avis_note_hors_intervalle():
-    """Une note > 5 doit lever une erreur de validation."""
+    """Une note superieure a 5 doit lever une erreur de validation."""
     df = df_avis_valide().copy()
     df['note'] = 6.0
     with pytest.raises(pa.errors.SchemaErrors):
@@ -40,7 +40,7 @@ def test_avis_note_hors_intervalle():
 
 
 def test_avis_destination_inconnue():
-    """Une destination inconnue doit être rejetée."""
+    """Une destination inconnue doit etre rejetee."""
     df = df_avis_valide().copy()
     df['destination'] = 'PARIS'
     with pytest.raises(pa.errors.SchemaErrors):
@@ -48,15 +48,15 @@ def test_avis_destination_inconnue():
 
 
 def test_avis_pii_user_id_detecte():
-    """Si user_id est présent (PII non supprimé), la validation échoue."""
+    """Si user_id est present (PII non supprime), la validation echoue."""
     df = df_avis_valide().copy()
-    df['user_id'] = 'USR_abc123'   # simule un oubli d'anonymisation
+    df['user_id'] = 'USR_abc123'
     with pytest.raises(pa.errors.SchemaErrors):
         valider_avis(df)
 
 
 def test_avis_pii_email_detecte():
-    """Si email_client est présent, la validation échoue."""
+    """Si email_client est present, la validation echoue."""
     df = df_avis_valide().copy()
     df['email_client'] = 'user@test.sn'
     with pytest.raises(pa.errors.SchemaErrors):
@@ -64,14 +64,14 @@ def test_avis_pii_email_detecte():
 
 
 def test_avis_sentiment_label_invalide():
-    """Un label sentiment non reconnu doit être rejeté."""
+    """Un label sentiment non reconnu doit etre rejete."""
     df = df_avis_valide().copy()
     df['sentiment_label'] = 'TRES_POSITIF'
     with pytest.raises(pa.errors.SchemaErrors):
         valider_avis(df)
 
 
-# ── Tests schéma e-commerce ───────────────────────────────────────────────────
+# Tests schema e-commerce
 
 def df_ecomm_valide():
     return pd.DataFrame([{
@@ -88,7 +88,7 @@ def test_ecomm_valide():
 
 
 def test_ecomm_montant_negatif():
-    """Un montant négatif n'a pas de sens — doit être rejeté."""
+    """Un montant negatif n'a pas de sens - doit etre rejete."""
     df = df_ecomm_valide().copy()
     df['montant_fcfa'] = -500.0
     with pytest.raises(pa.errors.SchemaErrors):

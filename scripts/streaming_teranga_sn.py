@@ -1,6 +1,6 @@
 # streaming_teranga_sn.py
-# Pipeline Spark Structured Streaming — Teranga-SN Eq.12
-# NLP sentiment FR/EN/WO + Privacy by Design + agrégation réputation destination
+# Pipeline Spark Structured Streaming - Teranga-SN Eq.12
+# NLP sentiment FR/EN/WO + Privacy by Design + agregation reputation destination
 
 import os
 from pyspark.sql import SparkSession
@@ -13,7 +13,7 @@ from pyspark.sql.types import (
     StructType, StructField, StringType, FloatType, TimestampType
 )
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# Configuration generale
 KAFKA_SERVERS = os.environ.get('KAFKA_SERVERS', 'kafka:9092')
 SALT          = os.environ.get('TERANGA_SECRET_SALT', 'teranga_salt_uadb_2025')
 
@@ -26,25 +26,25 @@ spark = (
 )
 spark.sparkContext.setLogLevel('WARN')
 
-# ── Lexique sentiment FR/EN/Wolof (domaine touristique sénégalais) ────────────
+# Lexique sentiment FR/EN/Wolof pour le domaine touristique senegalais
 LEXIQUE = {
     # Positif FR
     'magnifique': 0.90, 'excellent': 0.90, 'superbe': 0.85,
-    'teranga': 0.80, 'chaleureux': 0.75, 'délicieux': 0.80,
+    'teranga': 0.80, 'chaleureux': 0.75, 'delicieux': 0.80,
     'incontournable': 0.70, 'parfait': 0.85, 'sympa': 0.60,
     # Positif EN
     'amazing': 0.90, 'wonderful': 0.85, 'recommend': 0.75,
     'beautiful': 0.80, 'paradise': 0.90, 'stunning': 0.85,
     # Positif Wolof
     'dafa baax': 0.90, 'rafet': 0.80, 'baax': 0.85, 'yomb': 0.70,
-    # Négatif FR
-    'décevant': -0.70, 'arnaque': -0.90, 'sale': -0.80,
-    'déchets': -0.70, 'cher': -0.50, 'insatisfait': -0.75,
+    # Negatif FR
+    'decevant': -0.70, 'arnaque': -0.90, 'sale': -0.80,
+    'dechets': -0.70, 'cher': -0.50, 'insatisfait': -0.75,
     'professionnel': 0.60,
-    # Négatif EN
+    # Negatif EN
     'disappointed': -0.70, 'overpriced': -0.60, 'touts': -0.50,
     'dirty': -0.80, 'rude': -0.75,
-    # Négatif Wolof
+    # Negatif Wolof
     'dafa neka': -0.80, 'amul solo': -0.70,
 }
 
@@ -63,7 +63,7 @@ def score_sentiment(texte: str) -> float:
     return float(score / max(n, 1))
 
 
-# ── Schémas JSON ──────────────────────────────────────────────────────────────
+# Schemas JSON pour les deux topics Kafka
 schema_avis = StructType([
     StructField('avis_id',       StringType(), True),
     StructField('user_id',       StringType(), True),
@@ -89,7 +89,7 @@ schema_ecommerce = StructType([
 ])
 
 
-# ── Stream 1 : Avis touristiques avec NLP et Privacy ─────────────────────────
+# Stream 1 : avis touristiques avec NLP et anonymisation
 avis_df = (
     spark.readStream
     .format('kafka')
@@ -100,9 +100,9 @@ avis_df = (
     .select(from_json(col('value').cast('string'), schema_avis).alias('d'))
     .select('d.*')
     .withColumn('event_ts', current_timestamp())
-    # Privacy by Design : anonymisation SHA-256 + suppression PII
+    # Privacy by Design : SHA-256 + suppression du PII
     .withColumn('user_secure', sha2(concat(col('user_id'), lit(SALT)), 256))
-    .drop('user_id', 'email_client')                        # drop PII obligatoire
+    .drop('user_id', 'email_client')
     # NLP sentiment
     .withColumn('sentiment_score', score_sentiment(col('texte_avis')))
     .withColumn('sentiment_label',
@@ -112,7 +112,7 @@ avis_df = (
     )
 )
 
-# ── Agrégation réputation par destination (fenêtre glissante 7 jours) ─────────
+# Agregation reputation par destination sur une fenetre glissante de 7 jours
 reputation_df = (
     avis_df
     .withWatermark('event_ts', '1 day')
@@ -134,7 +134,7 @@ reputation_df = (
     )
 )
 
-# ── Stream 2 : Transactions e-commerce avec Privacy ───────────────────────────
+# Stream 2 : transactions e-commerce avec anonymisation
 ecomm_df = (
     spark.readStream
     .format('kafka')
@@ -145,13 +145,12 @@ ecomm_df = (
     .select(from_json(col('value').cast('string'), schema_ecommerce).alias('d'))
     .select('d.*')
     .withColumn('event_ts', current_timestamp())
-    # Privacy : anonymisation + drop PII
+    # Privacy : anonymisation + suppression user_id
     .withColumn('user_secure', sha2(concat(col('user_id'), lit(SALT)), 256))
     .drop('user_id')
 )
 
-# ── Sorties streaming ─────────────────────────────────────────────────────────
-# Query 1 : alertes réputation vers Kafka
+# Query 1 : alertes reputation envoyees vers un topic Kafka dedie
 q_reputation = (
     reputation_df
     .select(to_json(struct('*')).alias('value'))
@@ -164,7 +163,7 @@ q_reputation = (
     .start()
 )
 
-# Query 2 : avis enrichis vers console (debug) — remplacer par HBase sink en prod
+# Query 2 : avis enrichis vers console pour debug
 q_avis = (
     avis_df
     .select('avis_id', 'user_secure', 'destination', 'note',
@@ -178,7 +177,7 @@ q_avis = (
     .start()
 )
 
-# Query 3 : e-commerce vers console (debug)
+# Query 3 : e-commerce vers console pour debug
 q_ecomm = (
     ecomm_df
     .select('transaction_id', 'user_secure', 'categorie', 'montant_fcfa', 'region_livraison')
@@ -191,5 +190,5 @@ q_ecomm = (
     .start()
 )
 
-print('Pipeline Teranga-SN démarré — 3 queries actives')
+print('Pipeline Teranga-SN demarre - 3 queries actives')
 q_reputation.awaitTermination()

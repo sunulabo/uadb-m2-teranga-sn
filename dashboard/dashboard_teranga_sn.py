@@ -1,7 +1,7 @@
 # dashboard_teranga_sn.py
-# Dashboard graphique Teranga-SN — Eq.12
-# Carte satisfaction touristique + tendances e-commerce + alertes réputation
-# Fonctionne en mode standalone (données simulées) si Hive non disponible
+# Dashboard graphique Teranga-SN - Eq.12
+# Satisfaction touristique + tendances e-commerce + alertes reputation
+# Fonctionne en mode standalone (donnees simulees) si Hive n'est pas disponible
 
 import os
 import numpy as np
@@ -16,13 +16,13 @@ from datetime import datetime
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Palette couleurs Sénégal
+# Palette couleurs - vert/orange/rouge pour les statuts, bleu Senegal pour le reste
 COULEURS_STATUT = {'VERT': '#2E8B57', 'ORANGE': '#FF8C00', 'ROUGE': '#DC143C'}
 PALETTE_DASH    = ['#1B3A6B', '#2E74B5', '#4CAFDE', '#F0A500', '#E05C2E']
 
 
 def charger_donnees_hive():
-    """Charge les données depuis Hive. Retourne None si non disponible."""
+    """Charge les donnees depuis Hive. Retourne None si non disponible."""
     try:
         from pyhive import hive
         conn = hive.Connection(host='hive-metastore', port=10000, database='teranga_sn')
@@ -35,7 +35,7 @@ def charger_donnees_hive():
 
 
 def generer_donnees_demo():
-    """Données de démonstration réalistes si Hive indisponible."""
+    """Donnees de demonstration realistes si Hive est indisponible."""
     destinations = ['DAKAR', 'SAINT_LOUIS', 'SALY', 'CAP_SKIRRING', 'CASAMANCE', 'TOUBA', 'ZIGUINCHOR']
     categories   = ['ALIMENTATION', 'MODE', 'ELECTRONIQUE', 'ARTISANAT', 'TELECOM', 'BEAUTE']
     np.random.seed(42)
@@ -74,7 +74,7 @@ def generer_donnees_demo():
 
 
 def tracer_carte_reputation(df_dest: pd.DataFrame, ax):
-    """Graphique 1 : Carte satisfaction par destination (barres colorées par statut)."""
+    """Graphique 1 : satisfaction par destination avec couleur selon le statut."""
     df_s = df_dest.sort_values('note_moy', ascending=True)
     couleurs = [COULEURS_STATUT[s] for s in df_s['statut_reputation']]
 
@@ -86,24 +86,24 @@ def tracer_carte_reputation(df_dest: pd.DataFrame, ax):
 
     ax.set_xlim(0, 6.5)
     ax.set_xlabel('Note moyenne /5', fontsize=10)
-    ax.set_title('Satisfaction Touristique par Destination\n(DGTT — 30 derniers jours)',
+    ax.set_title('Satisfaction Touristique par Destination\n(DGTT - 30 derniers jours)',
                  fontsize=11, fontweight='bold', color='#1B3A6B')
 
     legendes = [mpatches.Patch(color=c, label=s) for s, c in COULEURS_STATUT.items()]
-    ax.legend(handles=legendes, loc='lower right', fontsize=8, title='Réputation')
+    ax.legend(handles=legendes, loc='lower right', fontsize=8, title='Reputation')
     ax.grid(axis='x', alpha=0.3, linestyle='--')
     ax.set_axisbelow(True)
 
 
 def tracer_sentiment_detail(df_dest: pd.DataFrame, ax):
-    """Graphique 2 : Distribution positif/négatif par destination."""
+    """Graphique 2 : distribution positif/negatif par destination."""
     df_s = df_dest.sort_values('pct_positif', ascending=False)
     x    = np.arange(len(df_s))
     w    = 0.35
 
     ax.bar(x - w/2, df_s['pct_positif'], w, label='% Positif',
            color='#2E8B57', alpha=0.85, edgecolor='white')
-    ax.bar(x + w/2, df_s['pct_negatif'], w, label='% Négatif',
+    ax.bar(x + w/2, df_s['pct_negatif'], w, label='% Negatif',
            color='#DC143C', alpha=0.85, edgecolor='white')
 
     ax.set_xticks(x)
@@ -117,7 +117,7 @@ def tracer_sentiment_detail(df_dest: pd.DataFrame, ax):
 
 
 def tracer_top_ecommerce(df_ecomm: pd.DataFrame, ax):
-    """Graphique 3 : Top catégories e-commerce par chiffre d'affaires."""
+    """Graphique 3 : top categories e-commerce par chiffre d'affaires."""
     df_cat = (df_ecomm.groupby('categorie')
               .agg(ca_total=('ca_total_fcfa', 'sum'),
                    nb_trans=('nb_transactions', 'sum'))
@@ -134,14 +134,14 @@ def tracer_top_ecommerce(df_ecomm: pd.DataFrame, ax):
                 f'{nb} transactions', va='center', fontsize=8)
 
     ax.set_xlabel('Chiffre d\'affaires (millions FCFA)', fontsize=10)
-    ax.set_title('Top Catégories E-commerce Sénégal\n(Jumia · Expat-Dakar · Senmarket)',
+    ax.set_title('Top Categories E-commerce Senegal\n(Jumia - Expat-Dakar - Senmarket)',
                  fontsize=11, fontweight='bold', color='#1B3A6B')
     ax.grid(axis='x', alpha=0.3, linestyle='--')
     ax.set_axisbelow(True)
 
 
 def tracer_heatmap_ecommerce(df_ecomm: pd.DataFrame, ax):
-    """Graphique 4 : Heatmap CA par région × catégorie."""
+    """Graphique 4 : heatmap du CA par region et categorie."""
     pivot = df_ecomm.pivot_table(
         index='region_livraison', columns='categorie',
         values='ca_total_fcfa', aggfunc='sum', fill_value=0
@@ -149,27 +149,27 @@ def tracer_heatmap_ecommerce(df_ecomm: pd.DataFrame, ax):
 
     sns.heatmap(pivot, ax=ax, cmap='YlOrRd', annot=True, fmt='.1f',
                 linewidths=0.5, cbar_kws={'label': 'CA (M FCFA)'}, annot_kws={'size': 7})
-    ax.set_title('Heatmap CA E-commerce\nRégion × Catégorie (M FCFA)',
+    ax.set_title('Heatmap CA E-commerce\nRegion x Categorie (M FCFA)',
                  fontsize=11, fontweight='bold', color='#1B3A6B')
-    ax.set_xlabel('Catégorie', fontsize=9)
-    ax.set_ylabel('Région', fontsize=9)
+    ax.set_xlabel('Categorie', fontsize=9)
+    ax.set_ylabel('Region', fontsize=9)
     ax.tick_params(axis='x', rotation=30, labelsize=8)
     ax.tick_params(axis='y', rotation=0,  labelsize=8)
 
 
 def generer_dashboard():
-    """Génère le dashboard complet en PNG haute résolution."""
+    """Genere le dashboard complet en PNG haute resolution."""
     df_dest, df_ecomm = charger_donnees_hive()
     mode = 'Hive'
     if df_dest is None:
         df_dest, df_ecomm = generer_donnees_demo()
-        mode = 'Démonstration'
-    print(f'Mode données : {mode}')
+        mode = 'Demonstration'
+    print(f'Mode donnees : {mode}')
 
     fig, axes = plt.subplots(2, 2, figsize=(18, 12))
     fig.suptitle(
-        'Teranga-SN — Tableau de Bord Intelligence Touristique & E-commerce\n'
-        f'DGTT Sénégal | {datetime.now().strftime("%d/%m/%Y %H:%M")} | Mode : {mode}',
+        'Teranga-SN - Tableau de Bord Intelligence Touristique & E-commerce\n'
+        f'DGTT Senegal | {datetime.now().strftime("%d/%m/%Y %H:%M")} | Mode : {mode}',
         fontsize=14, fontweight='bold', color='#1B3A6B', y=1.01
     )
 
@@ -183,7 +183,7 @@ def generer_dashboard():
     out_path = os.path.join(OUTPUT_DIR, 'dashboard_teranga_sn.png')
     fig.savefig(out_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close(fig)
-    print(f'Dashboard généré : {out_path}')
+    print(f'Dashboard genere : {out_path}')
     return out_path
 
 

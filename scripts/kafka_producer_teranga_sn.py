@@ -1,6 +1,6 @@
 # kafka_producer_teranga_sn.py
-# Simulateur de données touristiques et e-commerce — Teranga-SN Eq.12
-# Génère des avis (FR/EN/WO) et des transactions sur les topics Kafka
+# Simulateur de donnees touristiques et e-commerce - Teranga-SN Eq.12
+# Genere des avis (FR/EN/WO) et des transactions sur les topics Kafka
 
 from kafka import KafkaProducer
 import json, random, time, uuid
@@ -10,7 +10,7 @@ import numpy as np
 random.seed(42)
 np.random.seed(42)
 
-# ── Constantes domaine sénégalais ─────────────────────────────────────────────
+# Constantes domaine senegalais
 DESTINATIONS = [
     'DAKAR', 'SAINT_LOUIS', 'SALY', 'CAP_SKIRRING',
     'CASAMANCE', 'TOUBA', 'ZIGUINCHOR'
@@ -21,15 +21,15 @@ CATEGORIES_ECOMM = ['ALIMENTATION', 'MODE', 'ELECTRONIQUE', 'ARTISANAT', 'TELECO
 PLATEFORMES_AVIS = ['TRIPADVISOR', 'GOOGLE', 'BOOKING', 'EXPAT_DAKAR']
 PLATEFORMES_ECOMM = ['JUMIA', 'EXPAT_DAKAR', 'SENMARKET']
 
-# Corpus d'avis par langue (réaliste, ancré dans le contexte sénégalais)
+# Corpus d'avis par langue, ancre dans le contexte senegalais
 AVIS_POSITIFS = {
     'FR': [
-        'Excellent séjour, accueil chaleureux teranga !',
-        'Magnifique destination, cuisine délicieuse thiéboudienne',
-        'Plage de Saly superbe, personnel très sympa',
+        'Excellent sejour, accueil chaleureux teranga !',
+        'Magnifique destination, cuisine delicieuse thieboudienne',
+        'Plage de Saly superbe, personnel tres sympa',
         'Saint-Louis patrimoine UNESCO, incontournable',
-        'Casamance magnifique, nature préservée, guide excellent',
-        'Dakar vivante et chaleureuse, marché Sandaga incroyable',
+        'Casamance magnifique, nature preservee, guide excellent',
+        'Dakar vivante et chaleureuse, marche Sandaga incroyable',
     ],
     'EN': [
         'Amazing hospitality, highly recommend Dakar',
@@ -47,10 +47,10 @@ AVIS_POSITIFS = {
 
 AVIS_NEGATIFS = {
     'FR': [
-        'Trop de déchets sur la plage, décevant',
-        'Arnaque taxi, prix non affiché à l\'avance',
-        'Hôtel pas propre, ne recommande pas du tout',
-        'Trop cher pour la qualité proposée',
+        'Trop de dechets sur la plage, decevant',
+        'Arnaque taxi, prix non affiche a l\'avance',
+        'Hotel pas propre, ne recommande pas du tout',
+        'Trop cher pour la qualite proposee',
         'Guides peu professionnels, pas satisfait',
     ],
     'EN': [
@@ -61,16 +61,16 @@ AVIS_NEGATIFS = {
     ],
     'WO': [
         'Dafa neka lool, dafa cher na torop',
-        'Amul solo, dinañu dem yoon waw',
+        'Amul solo, dinanu dem yoon waw',
     ],
 }
 
 
 def gen_avis():
-    """Génère un avis touristique avec probabilité de positivité selon la saison."""
+    """Genere un avis touristique avec probabilite de positivite selon la saison."""
     dest = random.choice(DESTINATIONS)
     mois = datetime.utcnow().month
-    # Haute saison nov-mars : plus de touristes, avis plus positifs
+    # Haute saison nov-mars : plus de touristes, avis globalement plus positifs
     prob_pos = 0.65 if mois in [11, 12, 1, 2, 3] else 0.45
     langue = random.choices(['FR', 'EN', 'WO'], weights=[60, 30, 10])[0]
 
@@ -83,8 +83,8 @@ def gen_avis():
 
     return {
         'avis_id':       str(uuid.uuid4()),
-        'user_id':       f'USR_{uuid.uuid4().hex[:10]}',   # anonymisé en streaming
-        'email_client':  f'user{random.randint(1, 9999)}@test.sn',  # supprimé en streaming
+        'user_id':       f'USR_{uuid.uuid4().hex[:10]}',
+        'email_client':  f'user{random.randint(1, 9999)}@test.sn',
         'destination':   dest,
         'type_activite': random.choice(TYPES_ACTIVITE),
         'nationalite':   random.choice(NATIONALITES),
@@ -97,10 +97,10 @@ def gen_avis():
 
 
 def gen_ecommerce():
-    """Génère une transaction e-commerce locale sénégalaise."""
+    """Genere une transaction e-commerce locale senegalaise."""
     return {
         'transaction_id':  str(uuid.uuid4()),
-        'user_id':         f'USR_{uuid.uuid4().hex[:10]}',   # anonymisé en streaming
+        'user_id':         f'USR_{uuid.uuid4().hex[:10]}',
         'categorie':       random.choice(CATEGORIES_ECOMM),
         'montant_fcfa':    round(random.uniform(2000, 150000), 0),
         'region_livraison': random.choice(DESTINATIONS),
@@ -110,7 +110,7 @@ def gen_ecommerce():
 
 
 def gen_arrivee_dgtt():
-    """Génère une arrivée touristique DGTT (Direction Générale du Tourisme)."""
+    """Genere une arrivee touristique DGTT (Direction Generale du Tourisme)."""
     return {
         'arrivee_id':    str(uuid.uuid4()),
         'nationalite':   random.choice(NATIONALITES),
@@ -128,7 +128,7 @@ if __name__ == '__main__':
         value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode('utf-8'),
     )
 
-    print('Simulateur Teranga-SN démarré — Ctrl+C pour arrêter')
+    print('Simulateur Teranga-SN demarre - Ctrl+C pour arreter')
     print('Topics : teranga_avis_raw | teranga_arrivees_raw')
 
     compteur = 0
@@ -140,5 +140,5 @@ if __name__ == '__main__':
         producer.flush()
         compteur += 1
         if compteur % 10 == 0:
-            print(f'  {compteur} messages envoyés — {datetime.utcnow().strftime("%H:%M:%S")}')
+            print(f'  {compteur} messages envoyes - {datetime.utcnow().strftime("%H:%M:%S")}')
         time.sleep(3)

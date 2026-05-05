@@ -1,6 +1,6 @@
 # exploration_rapide.py
-# Script d'exploration perso — j'ai voulu comprendre les données avant de coder
-# NDIAYE Papa Malick — Teranga-SN Eq.12
+# Script d'exploration perso - j'ai voulu comprendre les donnees avant de coder
+# NDIAYE Papa Malick - Teranga-SN Eq.12
 
 import pandas as pd
 import numpy as np
@@ -9,28 +9,28 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 
-# Je génère quelques données pour visualiser avant de brancher Kafka
+# Quelques donnees pour visualiser avant de brancher Kafka
 np.random.seed(42)
 
 destinations = ['DAKAR', 'SAINT_LOUIS', 'SALY', 'CAP_SKIRRING', 'CASAMANCE', 'TOUBA', 'ZIGUINCHOR']
-mois_labels  = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun',
-                 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+mois_labels  = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun',
+                 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
 
-# Ce que j'ai remarqué : la saisonnalité est très marquée au Sénégal
-# Novembre à Mars = haute saison (touristes européens fuient l'hiver)
+# Ce que j'ai remarque : la saisonnalite est tres marquee au Senegal
+# Novembre a Mars = haute saison (touristes europeens fuient l'hiver)
 flux_mensuel = [320, 290, 280, 180, 140, 110, 100, 95, 130, 160, 240, 310]
 
-print("=== Exploration des données Teranga-SN ===\n")
+print("=== Exploration des donnees Teranga-SN ===\n")
 
 # Distribution des avis par langue
 langues = pd.Series({'FR': 60, 'EN': 30, 'WO': 10})
-print("Répartition des avis par langue :")
+print("Repartition des avis par langue :")
 print(langues.to_string())
 print()
 
 # Simulation rapide d'un score de sentiment
 avis_test = [
-    ("Magnifique séjour, teranga incroyable !", "FR"),
+    ("Magnifique sejour, teranga incroyable !", "FR"),
     ("Too many touts, disappointed", "EN"),
     ("Dafa baax torop, rafet na", "WO"),
     ("Plage sale, arnaque taxi", "FR"),
@@ -52,9 +52,9 @@ for texte, langue in avis_test:
 
 print()
 
-# Graphique saisonnalité — j'ai voulu voir visuellement avant tout
+# Graphique saisonnalite - j'ai voulu voir visuellement avant tout
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-fig.suptitle("Exploration initiale — Données Teranga-SN", fontweight='bold')
+fig.suptitle("Exploration initiale - Donnees Teranga-SN", fontweight='bold')
 
 # Flux mensuel
 axes[0].plot(mois_labels, flux_mensuel, 'o-', color='#1B3A6B', linewidth=2, markersize=6)
@@ -63,8 +63,8 @@ axes[0].axvspan(0, 2, alpha=0.1, color='orange', label='Haute saison')
 axes[0].axvspan(10, 11, alpha=0.1, color='orange')
 axes[0].set_xticks(range(12))
 axes[0].set_xticklabels(mois_labels, rotation=45, fontsize=8)
-axes[0].set_ylabel('Flux estimé (touristes/jour)')
-axes[0].set_title('Saisonnalité Touristique Sénégal')
+axes[0].set_ylabel('Flux estime (touristes/jour)')
+axes[0].set_title('Saisonnalite Touristique Senegal')
 axes[0].legend()
 axes[0].grid(alpha=0.3)
 
@@ -72,11 +72,11 @@ axes[0].grid(alpha=0.3)
 couleurs = ['#1B3A6B', '#4CAFDE', '#F0A500']
 axes[1].pie(langues.values, labels=langues.index, colors=couleurs,
             autopct='%1.0f%%', startangle=90, textprops={'fontsize': 10})
-axes[1].set_title('Répartition des Avis par Langue\n(FR/EN/WO)')
+axes[1].set_title('Repartition des Avis par Langue\n(FR/EN/WO)')
 
 plt.tight_layout()
 os.makedirs('data', exist_ok=True)
 plt.savefig('data/exploration_initiale.png', dpi=120, bbox_inches='tight')
 plt.close()
-print("Graphique d'exploration sauvegardé : data/exploration_initiale.png")
-print("\nConclusion : la saisonnalité et le Wolof sont deux défis clés du projet.")
+print("Graphique d'exploration sauvegarde : data/exploration_initiale.png")
+print("\nConclusion : la saisonnalite et le Wolof sont deux defis cles du projet.")

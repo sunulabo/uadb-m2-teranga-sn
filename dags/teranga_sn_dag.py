@@ -1,6 +1,6 @@
 # dags/teranga_sn_dag.py
-# DAG Airflow MLOps Teranga-SN — Eq.12
-# Monitoring hebdomadaire : détection dérive → réentraînement ou mise à jour dashboard
+# DAG Airflow MLOps Teranga-SN - Eq.12
+# Monitoring hebdomadaire : detection derive -> reentainement ou mise a jour dashboard
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator, BranchPythonOperator
@@ -22,8 +22,8 @@ default_args = {
 
 def check_reputation(**ctx):
     """
-    Vérifie le nombre de destinations en statut ROUGE dans Hive.
-    Si > 1 destination critique → déclenche le réentraînement du modèle.
+    Verifie le nombre de destinations en statut ROUGE dans Hive.
+    Si plus d'une destination critique est detectee, on relance l'entrainement.
     """
     try:
         from pyhive import hive
@@ -46,9 +46,9 @@ def check_reputation(**ctx):
 
 
 def retrain_model(**ctx):
-    """Soumet le script d'entraînement via spark-submit."""
+    """Soumet le script d'entrainement via spark-submit."""
     n_rouge = ctx['ti'].xcom_pull(key='n_rouge', task_ids='check_reputation')
-    logger.info(f'Réentraînement déclenché — {n_rouge} destinations ROUGE')
+    logger.info(f'Reentainement declenche - {n_rouge} destinations ROUGE')
     subprocess.run(
         ['spark-submit', '--master', 'spark://spark-master:7077',
          '/opt/models/train_flux_model.py'],
@@ -59,8 +59,8 @@ def retrain_model(**ctx):
 
 def update_dashboard(**ctx):
     """
-    Lit les KPIs depuis Hive et écrit les alertes ROUGE/ORANGE dans HBase.
-    Déclenché à chaque run, après réentraînement éventuel.
+    Lit les KPIs depuis Hive et ecrit les alertes ROUGE/ORANGE dans HBase.
+    Cette fonction est declenchee apres chaque run, avec ou sans reentainement.
     """
     try:
         import happybase
@@ -95,10 +95,10 @@ def update_dashboard(**ctx):
                         b'alerte:ts':          ts,
                     }
                 )
-                logger.info(f'Alerte HBase écrite — {dest} : {statut}')
+                logger.info(f'Alerte HBase ecrite - {dest} : {statut}')
 
         conn_hbase.close()
-        logger.info('Dashboard mis à jour avec succès')
+        logger.info('Dashboard mis a jour avec succes')
 
     except Exception as exc:
         logger.error(f'Erreur update_dashboard : {exc}')
@@ -106,7 +106,7 @@ def update_dashboard(**ctx):
 
 
 def generer_rapport_semaine(**ctx):
-    """Génère un rapport CSV hebdomadaire des KPIs."""
+    """Genere un rapport JSON hebdomadaire des KPIs."""
     import json, os
     from datetime import datetime
     semaine = datetime.utcnow().strftime('%Y-W%W')
@@ -120,18 +120,18 @@ def generer_rapport_semaine(**ctx):
     path = f'/opt/models/rapports/rapport_{semaine}.json'
     with open(path, 'w') as f:
         json.dump(rapport, f, indent=2)
-    logger.info(f'Rapport hebdo généré : {path}')
+    logger.info(f'Rapport hebdo genere : {path}')
 
 
-# ── Définition du DAG ─────────────────────────────────────────────────────────
+# Definition du DAG
 with DAG(
     dag_id='teranga_sn_monitoring',
     default_args=default_args,
-    schedule_interval='0 7 * * 1',     # chaque lundi à 07h00
+    schedule_interval='0 7 * * 1',
     start_date=days_ago(1),
     catchup=False,
     tags=['teranga-sn', 'tourisme', 'ecommerce', 'mlops'],
-    description='Monitoring hebdomadaire Teranga-SN : réputation + réentraînement ML',
+    description='Monitoring hebdomadaire Teranga-SN : reputation + reentainement ML',
 ) as dag:
 
     start  = DummyOperator(task_id='start')
@@ -162,7 +162,7 @@ with DAG(
         trigger_rule='none_failed_min_one_success',
     )
 
-    # Flux du DAG
+    # Ordre d'execution
     start >> branch >> [t_retrain, t_dashboard]
     t_retrain  >> t_dashboard
     t_dashboard >> t_rapport >> end

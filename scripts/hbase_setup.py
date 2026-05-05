@@ -1,6 +1,6 @@
 # hbase_setup.py
-# Création des tables HBase pour Teranga-SN — Eq.12
-# À exécuter une seule fois avant le démarrage du pipeline
+# Creation des tables HBase pour Teranga-SN - Eq.12
+# A executer une seule fois avant le demarrage du pipeline
 
 import happybase
 import logging
@@ -11,43 +11,44 @@ logger = logging.getLogger('teranga.hbase_setup')
 HBASE_HOST = 'localhost'
 HBASE_PORT = 9090
 
-# Définition des tables et familles de colonnes
+# Definition des trois tables et de leurs familles de colonnes
 TABLES = {
-    b'teranga:avis_analyses': {
-        b'meta':      {'max_versions': 1},
-        b'sentiment': {'max_versions': 1},
-        b'geo':       {'max_versions': 1},
+    'teranga:avis_analyses': {
+        'meta':      {'max_versions': 1},
+        'sentiment': {'max_versions': 1},
+        'geo':       {'max_versions': 1},
     },
-    b'teranga:alertes_reputation': {
-        b'alerte': {'max_versions': 1},
+    'teranga:alertes_reputation': {
+        'alerte': {'max_versions': 1},
     },
-    b'teranga:stats_ecommerce': {
-        b'stats': {'max_versions': 1},
-        b'meta':  {'max_versions': 1},
+    'teranga:stats_ecommerce': {
+        'stats': {'max_versions': 1},
+        'meta':  {'max_versions': 1},
     },
 }
 
 
 def create_teranga_tables():
-    """Crée les tables HBase si elles n'existent pas encore."""
+    """Cree les tables HBase si elles n'existent pas encore."""
     try:
         conn = happybase.Connection(HBASE_HOST, port=HBASE_PORT, timeout=10000)
         conn.open()
-        logger.info(f'Connecté à HBase — {HBASE_HOST}:{HBASE_PORT}')
+        logger.info(f'Connecte a HBase - {HBASE_HOST}:{HBASE_PORT}')
 
+        # Prerequis : le namespace 'teranga' doit exister avant cette etape
+        # Si besoin : docker exec teranga-hbase sh -c "echo \"create_namespace 'teranga'\" | hbase shell"
         existantes = {t.decode() for t in conn.tables()}
         logger.info(f'Tables existantes : {existantes or "aucune"}')
 
-        for nom_bytes, familles in TABLES.items():
-            nom = nom_bytes.decode()
+        for nom, familles in TABLES.items():
             if nom in existantes:
-                logger.info(f'Table {nom} — déjà présente, ignorée')
+                logger.info(f'Table {nom} - deja presente, ignoree')
             else:
-                conn.create_table(nom_bytes, familles)
-                logger.info(f'Table {nom} — créée avec succès ✓')
+                conn.create_table(nom, familles)
+                logger.info(f'Table {nom} - creee avec succes')
 
         conn.close()
-        logger.info('Configuration HBase terminée.')
+        logger.info('Configuration HBase terminee.')
 
     except Exception as exc:
         logger.error(f'Erreur HBase : {exc}')

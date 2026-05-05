@@ -93,9 +93,9 @@ services:
     networks:
       - teranga-net
     healthcheck:
-      test: ["CMD", "hbase", "status"]
+      test: ["CMD-SHELL", "nc -z localhost 9090"]
       interval: 30s
-      timeout: 15s
+      timeout: 20s
       retries: 5
 
   # ── Hive Metastore ────────────────────────────────────────────────────────────
@@ -112,31 +112,30 @@ services:
     networks:
       - teranga-net
 
-  # ── Spark Master ──────────────────────────────────────────────────────────────
+  # Spark Master
   spark-master:
-    image: bitnami/spark:3.3.2
+    image: apache/spark:latest
     container_name: teranga-spark-master
     ports:
       - "8080:8080"
       - "7077:7077"
     environment:
-      SPARK_MODE: master
-      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
-      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_NO_DAEMONIZE: "true"
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
     networks:
       - teranga-net
 
-  # ── Spark Worker ──────────────────────────────────────────────────────────────
+  # Spark Worker
   spark-worker:
-    image: bitnami/spark:3.3.2
+    image: apache/spark:latest
     container_name: teranga-spark-worker
     depends_on:
       - spark-master
     environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: spark://spark-master:7077
-      SPARK_WORKER_MEMORY: 2G
-      SPARK_WORKER_CORES: 2
+      SPARK_NO_DAEMONIZE: "true"
+      SPARK_WORKER_MEMORY: "2g"
+      SPARK_WORKER_CORES: "2"
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
     networks:
       - teranga-net
 
