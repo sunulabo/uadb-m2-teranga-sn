@@ -1,0 +1,39 @@
+# Teranga-SN — gitignore
+
+# Données et modèles (trop lourds)
+data/
+models/*.pkl
+models/*.joblib
+*.parquet
+*.orc
+
+# Secrets — ne jamais commiter
+.env
+*.env
+**/secrets.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+
+# Logs
+logs/
+*.log
+airflow-logs/
+
+# Checkpoints Spark Streaming
+/tmp/teranga_*_ckpt/
+checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
