@@ -1,377 +1,351 @@
 # generate_rapport.py
-# Generation du rapport final Teranga-SN en Word
+# Generation du rapport final Teranga-SN
 # NDIAYE Papa Malick - Eq.12 - Master 2 DSGL UADB 2025-2026
 
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 OUT_PATH = os.path.join(BASE_DIR, 'rapport_teranga_sn.docx')
 
-BLEU     = RGBColor(0x1B, 0x3A, 0x6B)
-BLEU_CLR = RGBColor(0x2E, 0x74, 0xB5)
-GRIS     = RGBColor(0x60, 0x60, 0x60)
-BLANC    = RGBColor(0xFF, 0xFF, 0xFF)
 
-
-def set_col_width(table, col_idx, width_cm):
-    for row in table.rows:
-        row.cells[col_idx].width = Cm(width_cm)
-
-
-def titre_para(doc, texte, niveau=1, couleur=None):
-    h = doc.add_heading(texte, level=niveau)
-    for run in h.runs:
-        run.font.color.rgb = couleur or BLEU
-        if niveau == 1:
-            run.font.size = Pt(16)
-            run.bold = True
-        elif niveau == 2:
-            run.font.size = Pt(13)
-            run.bold = True
-        else:
-            run.font.size = Pt(11)
-    return h
-
-
-def para(doc, texte, taille=11, gras=False, couleur=None, italique=False, alignement=None):
+def para(doc, texte, taille=11, gras=False, italique=False, centre=False):
     p = doc.add_paragraph()
-    if alignement:
-        p.alignment = alignement
+    if centre:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = p.add_run(texte)
     run.font.size = Pt(taille)
     run.bold = gras
     run.italic = italique
-    if couleur:
-        run.font.color.rgb = couleur
     return p
 
 
-def ligne_vide(doc):
+def puce(doc, texte):
+    p = doc.add_paragraph(style='List Bullet')
+    run = p.add_run(texte)
+    run.font.size = Pt(11)
+    return p
+
+
+def titre1(doc, texte):
+    h = doc.add_heading(texte, level=1)
+    h.runs[0].font.size = Pt(14)
+    h.runs[0].bold = True
+    return h
+
+
+def titre2(doc, texte):
+    h = doc.add_heading(texte, level=2)
+    h.runs[0].font.size = Pt(12)
+    h.runs[0].bold = True
+    return h
+
+
+def espace(doc):
     doc.add_paragraph('')
 
 
-def ajouter_tableau(doc, headers, rows, col_widths=None):
-    table = doc.add_table(rows=1 + len(rows), cols=len(headers))
-    table.style = 'Table Grid'
-    # En-tete
-    hdr = table.rows[0]
-    for i, h in enumerate(headers):
-        cell = hdr.cells[i]
+def tableau(doc, entetes, lignes, largeurs=None):
+    t = doc.add_table(rows=1 + len(lignes), cols=len(entetes))
+    t.style = 'Table Grid'
+    # En-tetes en gras, fond blanc
+    for i, h in enumerate(entetes):
+        cell = t.rows[0].cells[i]
         cell.text = h
-        run = cell.paragraphs[0].runs[0]
-        run.bold = True
-        run.font.color.rgb = BLANC
-        run.font.size = Pt(10)
-        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        shading = OxmlElement('w:shd')
-        shading.set(qn('w:fill'), '1B3A6B')
-        shading.set(qn('w:color'), 'auto')
-        shading.set(qn('w:val'), 'clear')
-        cell._tc.get_or_add_tcPr().append(shading)
+        cell.paragraphs[0].runs[0].bold = True
+        cell.paragraphs[0].runs[0].font.size = Pt(10)
     # Donnees
-    for r_idx, row_data in enumerate(rows):
-        row = table.rows[r_idx + 1]
-        bg = 'EBF0F8' if r_idx % 2 == 0 else 'FFFFFF'
-        for c_idx, val in enumerate(row_data):
-            cell = row.cells[c_idx]
+    for r, ligne in enumerate(lignes):
+        for c, val in enumerate(ligne):
+            cell = t.rows[r + 1].cells[c]
             cell.text = str(val)
             cell.paragraphs[0].runs[0].font.size = Pt(10)
-            shading = OxmlElement('w:shd')
-            shading.set(qn('w:fill'), bg)
-            shading.set(qn('w:color'), 'auto')
-            shading.set(qn('w:val'), 'clear')
-            cell._tc.get_or_add_tcPr().append(shading)
-    if col_widths:
-        for i, w in enumerate(col_widths):
-            set_col_width(table, i, w)
-    return table
+    # Largeurs
+    if largeurs:
+        for row in t.rows:
+            for i, w in enumerate(largeurs):
+                row.cells[i].width = Cm(w)
+    return t
 
 
-def ajouter_code(doc, code, titre=None):
-    if titre:
-        p = doc.add_paragraph()
-        run = p.add_run(titre)
-        run.font.size = Pt(9)
-        run.font.color.rgb = BLEU_CLR
-        run.bold = True
-        run.italic = True
+def bloc_code(doc, texte):
     p = doc.add_paragraph()
-    p.style = 'Normal'
-    run = p.add_run(code)
+    run = p.add_run(texte)
     run.font.name = 'Courier New'
-    run.font.size = Pt(8.5)
-    run.font.color.rgb = RGBColor(0x20, 0x20, 0x20)
-    # Fond gris clair via shading
-    pPr = p._p.get_or_add_pPr()
-    shd = OxmlElement('w:shd')
-    shd.set(qn('w:val'), 'clear')
-    shd.set(qn('w:color'), 'auto')
-    shd.set(qn('w:fill'), 'F2F2F2')
-    pPr.append(shd)
+    run.font.size = Pt(9)
     return p
 
 
 def page_titre(doc):
-    doc.add_picture(os.path.join(DATA_DIR, 'dashboard_teranga_sn.png'), width=Inches(6.0))
-    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    ligne_vide(doc)
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run('UNIVERSITE ALIOUNE DIOP DE BAMBEY')
-    run.font.size = Pt(13)
-    run.bold = True
-    run.font.color.rgb = BLEU
-
-    p2 = doc.add_paragraph()
-    p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run2 = p2.add_run('Master 2 - Sciences et Gestion du Logiciel et des Donnees')
-    run2.font.size = Pt(11)
-    run2.font.color.rgb = GRIS
-
-    ligne_vide(doc)
-
-    p3 = doc.add_paragraph()
-    p3.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run3 = p3.add_run('TERANGA-SN')
-    run3.font.size = Pt(26)
-    run3.bold = True
-    run3.font.color.rgb = BLEU
-
-    p4 = doc.add_paragraph()
-    p4.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run4 = p4.add_run('Intelligence Touristique & Economie Numerique au Senegal')
-    run4.font.size = Pt(14)
-    run4.font.color.rgb = BLEU_CLR
-
-    ligne_vide(doc)
-
-    p5 = doc.add_paragraph()
-    p5.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run5 = p5.add_run('Projet Final - Big Data Pipeline')
-    run5.font.size = Pt(12)
-    run5.bold = True
-
-    ligne_vide(doc)
-
-    ajouter_tableau(doc,
-        ['Equipe', 'Membres', 'Annee'],
-        [['Eq.12', 'NDIAYE Papa Malick  |  TINE Abdoussalam', '2025-2026']],
-        col_widths=[3, 9, 3]
+    espace(doc)
+    para(doc, 'UNIVERSITE ALIOUNE DIOP DE BAMBEY', taille=13, gras=True, centre=True)
+    para(doc, 'Ecole Superieure de Technologie', taille=11, centre=True)
+    para(doc, 'Master 2 - Sciences et Gestion du Logiciel et des Donnees (DSGL)', taille=11, centre=True)
+    espace(doc)
+    espace(doc)
+    para(doc, 'PROJET FINAL - BIG DATA', taille=13, gras=True, centre=True)
+    espace(doc)
+    para(doc, 'TERANGA-SN', taille=22, gras=True, centre=True)
+    para(doc, 'Plateforme d\'Intelligence Touristique et d\'Economie Numerique au Senegal', taille=13, centre=True)
+    espace(doc)
+    espace(doc)
+    tableau(doc,
+        ['', ''],
+        [
+            ['Equipe', 'Eq.12'],
+            ['Membres', 'NDIAYE Papa Malick  |  TINE Abdoussalam'],
+            ['Encadrant', 'Professeur Big Data - UADB'],
+            ['Annee universitaire', '2025-2026'],
+            ['Date de rendu', 'Mai 2026'],
+        ],
+        largeurs=[5, 11]
     )
-
-    ligne_vide(doc)
-    p6 = doc.add_paragraph()
-    p6.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run6 = p6.add_run('Dakar, mai 2026')
-    run6.font.size = Pt(11)
-    run6.font.color.rgb = GRIS
-    run6.italic = True
-
+    espace(doc)
+    img = os.path.join(DATA_DIR, 'dashboard_teranga_sn.png')
+    if os.path.exists(img):
+        doc.add_picture(img, width=Inches(5.8))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        para(doc, 'Apercu du tableau de bord Teranga-SN (mode demonstration)', taille=9, italique=True, centre=True)
     doc.add_page_break()
 
 
-def section_introduction(doc):
-    titre_para(doc, '1. Introduction et Contexte')
+def resume(doc):
+    titre1(doc, 'Resume executif')
+    para(doc,
+        'Teranga-SN est une plateforme Big Data deployee pour la Direction Generale du '
+        'Tourisme et des Transports Touristiques (DGTT) du Senegal. Elle collecte, '
+        'traite et analyse en temps reel deux flux de donnees : les avis touristiques '
+        'publies en francais, anglais et wolof, et les transactions e-commerce des '
+        'plateformes locales (Jumia, Expat-Dakar, Senmarket).')
+    espace(doc)
+    para(doc,
+        'Le systeme repose sur une architecture Big Data complete : Apache Kafka assure '
+        'l\'ingestion, Apache Spark Structured Streaming traite les donnees en flux, '
+        'HBase et Hive assurent le stockage, un modele Random Forest predit les flux '
+        'de touristes, et Apache Airflow orchestre le tout de facon hebdomadaire.')
+    espace(doc)
+    para(doc,
+        'Les resultats techniques sont les suivants : 10 tests unitaires valides (10/10), '
+        'un modele de prediction avec un R2 de 0.90, et un pipeline complet de 8 '
+        'services Docker operationnels. Ce projet repond a un besoin reel et strategique '
+        'pour le secteur touristique senegalais.')
+    doc.add_page_break()
+
+
+def introduction(doc):
+    titre1(doc, '1. Introduction et Contexte')
 
     para(doc,
-        'Le secteur touristique senegalais represente environ 7% du PIB national et constitue '
-        'l\'une des principales sources de devises du pays. Pourtant, la Direction Generale du '
-        'Tourisme et des Transports Touristiques (DGTT) dispose de peu d\'outils modernes pour '
-        'analyser en temps reel les flux de visiteurs et la reputation des destinations.')
-
-    ligne_vide(doc)
-
+        'Le tourisme represente environ 7% du PIB du Senegal et constitue l\'une des '
+        'premieres sources de devises du pays. Pourtant, les acteurs institutionnels '
+        'comme la DGTT disposent de peu d\'outils modernes pour analyser les flux de '
+        'visiteurs en temps reel ou anticiper les periodes de crise de reputation.')
+    espace(doc)
     para(doc,
-        'Le projet Teranga-SN repond a ce besoin en construisant une plateforme Big Data complete '
-        'qui traite simultanement deux sources de donnees :')
+        'Le projet Teranga-SN repond directement a ce manque. Son nom vient du mot '
+        'wolof qui signifie hospitalite, valeur fondamentale de la culture senegalaise '
+        'et premier attrait pour les touristes etrangers. L\'idee est simple : si nous '
+        'pouvons mesurer la satisfaction en temps reel sur toutes les destinations du '
+        'pays et dans toutes les langues parles par les visiteurs, nous pouvons agir '
+        'avant qu\'une mauvaise reputation ne fasse fuir les touristes.')
+    espace(doc)
 
-    for item in [
-        'Les avis touristiques en trois langues : francais (FR), anglais (EN) et wolof (WO)',
-        'Les transactions e-commerce des principales plateformes locales (Jumia, Expat-Dakar, Senmarket)',
-    ]:
-        p = doc.add_paragraph(item, style='List Bullet')
-        p.runs[0].font.size = Pt(11)
+    titre2(doc, '1.1 Problematiques traitees')
+    para(doc, 'Ce projet repond a trois problematiques concretes :')
+    puce(doc, 'Comment analyser des avis touristiques en wolof alors que la plupart des outils NLP ne couvrent pas cette langue ?')
+    puce(doc, 'Comment proteger les donnees personnelles des touristes tout en conservant la possibilite de detecter les doublons et le spam ?')
+    puce(doc, 'Comment prevoir le nombre d\'arrivees touristiques par destination pour aider la DGTT a planifier ses ressources ?')
+    espace(doc)
 
-    ligne_vide(doc)
-
-    para(doc,
-        'Le nom du projet, "Teranga", signifie "hospitalite" en wolof - valeur fondamentale '
-        'de la culture senegalaise et atout majeur du tourisme local. C\'est aussi le fil '
-        'conducteur de notre approche : construire un systeme qui mesure et protege cette '
-        'reputation d\'accueil.')
-
-    ligne_vide(doc)
-    titre_para(doc, '1.1 Objectifs du projet', niveau=2)
-
-    ajouter_tableau(doc,
-        ['Objectif', 'Description', 'Technologie'],
+    titre2(doc, '1.2 Objectifs du projet')
+    tableau(doc,
+        ['Objectif', 'Description', 'Technologie utilisee'],
         [
             ['Ingestion temps reel', 'Collecter les avis et transactions en continu', 'Apache Kafka + NiFi'],
-            ['Analyse NLP multilingue', 'Scorer le sentiment en FR/EN/WO', 'Spark Streaming + Lexique'],
-            ['Privacy by Design', 'Anonymiser les donnees personnelles', 'SHA-256 + Pandera'],
-            ['Stockage analytique', 'Persister pour requetes SQL et NoSQL', 'HBase + Hive ORC'],
-            ['Prediction flux', 'Prevoir les arrivees touristiques', 'Random Forest + MLflow'],
-            ['Orchestration', 'Monitorer et reagir automatiquement', 'Airflow DAG'],
-            ['Visualisation', 'Tableau de bord pour la DGTT', 'Matplotlib + Seaborn'],
+            ['Analyse NLP multilingue', 'Scorer le sentiment en FR, EN et WO', 'Spark Streaming + Lexique metier'],
+            ['Privacy by Design', 'Anonymiser les donnees personnelles des la collecte', 'SHA-256 + sel cryptographique'],
+            ['Stockage hybride', 'NoSQL pour le temps reel, SQL pour l\'analytique', 'HBase + Hive ORC/SNAPPY'],
+            ['Prediction ML', 'Prevoir les flux touristiques par destination', 'Random Forest + MLflow'],
+            ['Orchestration', 'Declencher le reentainement si la reputation chute', 'Airflow DAG hebdomadaire'],
+            ['Visualisation', 'Tableau de bord pour les decideurs de la DGTT', 'Matplotlib + Seaborn'],
         ],
-        col_widths=[4, 7, 5]
+        largeurs=[4, 7, 5]
     )
     doc.add_page_break()
 
 
-def section_architecture(doc):
-    titre_para(doc, '2. Architecture Technique')
+def architecture(doc):
+    titre1(doc, '2. Architecture Technique')
 
     para(doc,
-        'L\'architecture Teranga-SN suit un pattern Lambda simplifie, avec une couche de '
-        'traitement en flux (speed layer) et une couche de stockage analytique (serving layer). '
-        'L\'ensemble est orchestre par Apache Airflow et deploye dans des conteneurs Docker.')
+        'L\'architecture de Teranga-SN suit un pattern Lambda simplifie. Les donnees '
+        'entrent par Kafka, sont traitees par Spark en temps reel, puis stockees dans '
+        'deux systemes complementaires : HBase pour les requetes rapides operationnelles, '
+        'et Hive pour les analyses historiques. Airflow surveille le tout chaque semaine.')
+    espace(doc)
 
-    ligne_vide(doc)
-    titre_para(doc, '2.1 Vue d\'ensemble', niveau=2)
-
-    ajouter_tableau(doc,
-        ['Couche', 'Role', 'Services', 'Port'],
-        [
-            ['Ingestion', 'Collecte des donnees brutes', 'Kafka + NiFi', '9093 / 8081'],
-            ['Traitement', 'NLP, anonymisation, agregation', 'Spark Structured Streaming', 'interne'],
-            ['Validation', 'Controle qualite et PII', 'Pandera schemas', 'local'],
-            ['Stockage NoSQL', 'Donnees analytiques temps reel', 'HBase Thrift', '9090'],
-            ['Stockage SQL', 'Entrepot de donnees partitionne', 'Hive HiveServer2', '10000'],
-            ['ML', 'Prediction flux touristiques', 'Scikit-learn + MLflow', 'local'],
-            ['Orchestration', 'Scheduling et monitoring', 'Airflow', '8082'],
-            ['Visualisation', 'Dashboard decision DGTT', 'Matplotlib + Seaborn', 'fichier PNG'],
-        ],
-        col_widths=[3.5, 5, 4.5, 3]
-    )
-
-    ligne_vide(doc)
-    titre_para(doc, '2.2 Infrastructure Docker', niveau=2)
-
+    titre2(doc, '2.1 Flux de donnees de bout en bout')
     para(doc,
-        'Tous les services sont definis dans un seul fichier docker-compose.yml et communiquent '
-        'sur un reseau prive teranga-net. Le tableau suivant recapitule l\'etat de chaque '
-        'service apres demarrage :')
+        'Voici comment une donnee voyage dans le systeme, depuis sa creation jusqu\'a '
+        'son affichage dans le tableau de bord :')
+    espace(doc)
+    para(doc,
+        '1. Un touriste publie un avis sur TripAdvisor. NiFi ou le producteur Kafka '
+        'capture cet avis et l\'envoie dans le topic teranga_avis_raw.')
+    para(doc,
+        '2. Spark Structured Streaming lit le topic. Il anonymise immediatement le '
+        'user_id avec SHA-256, analyse le sentiment du texte, et calcule un score.')
+    para(doc,
+        '3. Les donnees enrichies et anonymisees sont ecrites dans HBase pour '
+        'consultation rapide et dans Hive pour l\'historique analytique.')
+    para(doc,
+        '4. Chaque lundi, le DAG Airflow interroge Hive. Si plus d\'une destination '
+        'est en alerte ROUGE, il relance automatiquement l\'entrainement du modele ML.')
+    para(doc,
+        '5. Le tableau de bord lit Hive et genere les quatre panneaux de visualisation '
+        'pour les decideurs de la DGTT.')
+    espace(doc)
 
-    ligne_vide(doc)
-
-    ajouter_tableau(doc,
-        ['Conteneur', 'Image', 'Etat', 'Ports exposes'],
+    titre2(doc, '2.2 Infrastructure Docker')
+    para(doc,
+        'L\'ensemble des services est deploye via Docker Compose sur un reseau prive '
+        'teranga-net. Le tableau suivant presente l\'etat de chaque service apres '
+        'demarrage et les tests de validation realises :')
+    espace(doc)
+    tableau(doc,
+        ['Service', 'Image Docker', 'Port', 'Etat valide'],
         [
-            ['teranga-zookeeper', 'confluentinc/cp-zookeeper:7.4.0', 'healthy', '2181'],
-            ['teranga-kafka', 'confluentinc/cp-kafka:7.4.0', 'healthy', '9092, 9093'],
-            ['teranga-nifi', 'apache/nifi:1.23.2', 'running', '8081'],
-            ['teranga-hbase', 'harisekhon/hbase:2.1', 'healthy', '9090, 16010'],
-            ['teranga-hive', 'apache/hive:3.1.3', 'running', '10000'],
-            ['teranga-spark-master', 'apache/spark:latest (4.1.1)', 'running', '8080, 7077'],
-            ['teranga-spark-worker', 'apache/spark:latest (4.1.1)', 'running', 'interne'],
-            ['teranga-airflow', 'apache/airflow:2.7.3', 'running', '8082'],
+            ['Zookeeper', 'confluentinc/cp-zookeeper:7.4.0', '2181', 'Healthy'],
+            ['Kafka', 'confluentinc/cp-kafka:7.4.0', '9092 / 9093', 'Healthy - 2 topics crees'],
+            ['NiFi', 'apache/nifi:1.23.2', '8081', 'Running - interface accessible'],
+            ['HBase', 'harisekhon/hbase:2.1', '9090 / 16010', 'Healthy - 3 tables creees'],
+            ['Hive', 'apache/hive:3.1.3', '10000', 'Running - 2 tables + 2 vues'],
+            ['Spark Master', 'apache/spark:latest (v4.1.1)', '8080 / 7077', 'Running - worker enregistre'],
+            ['Spark Worker', 'apache/spark:latest (v4.1.1)', 'interne', 'Running - 2 Go RAM, 2 coeurs'],
+            ['Airflow', 'apache/airflow:2.7.3', '8082', 'Running - DAG charge'],
         ],
-        col_widths=[4.5, 5.5, 2.5, 3.5]
+        largeurs=[3.5, 5.5, 3, 4]
     )
     doc.add_page_break()
 
 
-def section_kafka(doc):
-    titre_para(doc, '3. Ingestion des Donnees : Kafka et NiFi')
+def kafka_nifi(doc):
+    titre1(doc, '3. Ingestion des Donnees : Kafka et NiFi')
 
-    titre_para(doc, '3.1 Architecture Kafka', niveau=2)
     para(doc,
-        'Apache Kafka sert de bus de messages central. Deux topics sont utilises :')
+        'La couche d\'ingestion est le point d\'entree de toutes les donnees dans '
+        'le systeme. Elle doit etre capable de recevoir des milliers de messages par '
+        'jour de facon fiable et sans perte.')
+    espace(doc)
 
-    ajouter_tableau(doc,
-        ['Topic', 'Producteur', 'Contenu', 'Volume estime'],
+    titre2(doc, '3.1 Architecture Kafka')
+    para(doc,
+        'Apache Kafka joue le role de bus de messages central. Deux topics ont ete '
+        'crees, chacun correspondant a un type de donnee distinct :')
+    espace(doc)
+    tableau(doc,
+        ['Topic Kafka', 'Source', 'Donnees transportees', 'Volume'],
         [
-            ['teranga_avis_raw', 'kafka_producer_teranga_sn.py / NiFi', 'Avis touristiques JSON (FR/EN/WO)', '~1 msg / 3s'],
-            ['teranga_arrivees_raw', 'kafka_producer_teranga_sn.py', 'Transactions e-commerce + arrivees DGTT', '~2 msg / 3s'],
+            ['teranga_avis_raw', 'NiFi / Producteur Python', 'Avis touristiques en JSON (FR, EN, WO)', 'Environ 1 message toutes les 3 secondes'],
+            ['teranga_arrivees_raw', 'Producteur Python', 'Transactions e-commerce + arrivees DGTT', 'Environ 2 messages toutes les 3 secondes'],
         ],
-        col_widths=[4.5, 4.5, 5, 3]
+        largeurs=[4, 3.5, 5, 3.5]
     )
+    espace(doc)
+    para(doc,
+        'Pourquoi deux topics separes ? Parce que les avis et les transactions ont des '
+        'schemas differents et des traitements differents dans Spark. Separer les flux '
+        'des l\'ingestion simplifie le code et permet de scaler chaque topic '
+        'independamment si le volume augmente.')
+    espace(doc)
 
-    ligne_vide(doc)
-    para(doc, 'Exemple de message brut dans teranga_avis_raw (avant anonymisation) :')
-    ajouter_code(doc,
+    titre2(doc, '3.2 Structure d\'un message brut')
+    para(doc,
+        'Voici un exemple de message tel qu\'il arrive dans Kafka, avant tout traitement. '
+        'On remarque la presence de donnees personnelles (user_id, email_client) qui '
+        'seront supprimees des la premiere etape de Spark :')
+    espace(doc)
+    bloc_code(doc,
+        'Topic: teranga_avis_raw\n\n'
         '{\n'
-        '  "avis_id": "b29b6f5d-5762-44b4-a449-3f5267bcbd11",\n'
-        '  "user_id": "USR_27f989caa4",         <- PII a supprimer\n'
-        '  "email_client": "user1680@test.sn",   <- PII a supprimer\n'
-        '  "destination": "TOUBA",\n'
-        '  "type_activite": "PELERINAGE",\n'
-        '  "note": 1.4,\n'
-        '  "texte_avis": "Arnaque taxi, prix non affiche a l\'avance",\n'
-        '  "langue": "FR",\n'
-        '  "timestamp": "2026-05-05T18:41:22Z"\n'
+        '  "avis_id":      "b29b6f5d-5762-44b4-a449-3f5267bcbd11",\n'
+        '  "user_id":      "USR_27f989caa4",          <- donnee personnelle a anonymiser\n'
+        '  "email_client": "user1680@test.sn",         <- donnee personnelle a supprimer\n'
+        '  "destination":  "TOUBA",\n'
+        '  "note":         1.4,\n'
+        '  "texte_avis":   "Arnaque taxi, prix non affiche a l\'avance",\n'
+        '  "langue":       "FR",\n'
+        '  "timestamp":    "2026-05-05T18:41:22Z"\n'
         '}'
     )
+    espace(doc)
 
-    ligne_vide(doc)
-    titre_para(doc, '3.2 Flux NiFi', niveau=2)
+    titre2(doc, '3.3 Role de NiFi')
     para(doc,
-        'Apache NiFi (accessible sur localhost:8081, identifiants admin/teranga2025!) '
-        'orchestre l\'ingestion depuis des sources externes (API TripAdvisor, flux RSS). '
-        'Le template NiFi exporte (nifi_templates/template_nifi_eq12.xml) contient '
-        'trois processors : GenerateFlowFile, PublishKafka (avis), PublishKafka (arrivees).')
-
+        'Apache NiFi est l\'outil d\'integration qui permet de connecter des sources '
+        'externes comme l\'API TripAdvisor directement a Kafka, sans ecrire de code. '
+        'Il est accessible sur http://localhost:8081 avec les identifiants admin/teranga2025!. '
+        'Le template NiFi de l\'equipe (template_nifi_eq12.xml) definit un flux a '
+        'trois processeurs : GenerateFlowFile simule les avis, et deux ProcessorPublishKafka '
+        'envoient vers chacun des deux topics.')
     doc.add_page_break()
 
 
-def section_spark(doc):
-    titre_para(doc, '4. Traitement Spark Structured Streaming')
+def spark(doc):
+    titre1(doc, '4. Traitement en Flux : Spark Structured Streaming')
 
     para(doc,
-        'Le coeur du traitement est realise par Apache Spark Structured Streaming. '
-        'Trois queries tournent en parallele sur le cluster Spark (Master: localhost:8080).')
+        'Spark Structured Streaming est le coeur du systeme. C\'est lui qui transforme '
+        'les donnees brutes en informations exploitables. Il realise trois operations '
+        'en parallele : l\'anonymisation des donnees personnelles, l\'analyse de sentiment, '
+        'et le calcul de la reputation par destination.')
+    espace(doc)
 
-    ligne_vide(doc)
-    titre_para(doc, '4.1 Privacy by Design : anonymisation SHA-256', niveau=2)
-
+    titre2(doc, '4.1 Privacy by Design : l\'anonymisation SHA-256')
     para(doc,
-        'Conformement au RGPD, les donnees personnelles (user_id, email_client) sont '
-        'traitees des leur arrivee dans le pipeline. L\'identifiant est remplace par '
-        'un hash SHA-256 irreversible avec sel cryptographique :')
-
-    ajouter_code(doc,
-        '# user_id -> SHA-256(user_id + sel) -> user_secure\n'
+        'Des leur arrivee dans Spark, les donnees personnelles sont traitees selon le '
+        'principe du Privacy by Design : on ne conserve jamais ce qu\'on n\'a pas le '
+        'droit de stocker.')
+    espace(doc)
+    para(doc,
+        'Pourquoi SHA-256 plutot que de simplement supprimer le user_id ? Parce que '
+        'supprimer l\'identifiant completement nous empeche de detecter si un meme '
+        'utilisateur envoie dix avis negatifs en une heure pour nuire a une destination. '
+        'SHA-256 avec un sel cryptographique nous donne un identifiant stable et '
+        'irreversible : on peut compter les recurrences sans jamais connaitre l\'identite reelle.')
+    espace(doc)
+    bloc_code(doc,
+        '# Anonymisation : user_id -> SHA-256(user_id + sel) -> user_secure (64 caracteres hex)\n'
         '.withColumn("user_secure",\n'
         '    sha2(concat(col("user_id"), lit(SALT)), 256))\n'
-        '.drop("user_id", "email_client")   # suppression immediate du PII',
-        titre='Anonymisation dans streaming_teranga_sn.py'
+        '.drop("user_id", "email_client")   # suppression immediate et definitive'
     )
+    espace(doc)
 
+    titre2(doc, '4.2 Analyse de sentiment multilingue')
     para(doc,
-        'Apres cette transformation, user_secure est un hash de 64 caracteres hexadecimaux '
-        'qui permet de detecter les doublons sans jamais exposer l\'identite reelle.')
-
-    ligne_vide(doc)
-    titre_para(doc, '4.2 Analyse de sentiment NLP', niveau=2)
-
-    para(doc,
-        'L\'analyse de sentiment utilise une approche lexicale adaptee au domaine touristique '
-        'senegalais. Le lexique couvre trois langues :')
-
-    ajouter_tableau(doc,
+        'L\'analyse de sentiment utilise une approche lexicale adaptee au domaine '
+        'touristique senegalais. Un dictionnaire de termes positifs et negatifs a ete '
+        'construit en trois langues. Pour chaque avis, le score est la moyenne des '
+        'valeurs des termes trouves dans le texte.')
+    espace(doc)
+    tableau(doc,
         ['Langue', 'Termes positifs (exemples)', 'Termes negatifs (exemples)'],
         [
             ['Francais (FR)', 'magnifique (+0.90), teranga (+0.80), excellent (+0.90)', 'arnaque (-0.90), sale (-0.80), decevant (-0.70)'],
             ['Anglais (EN)', 'amazing (+0.90), paradise (+0.90), beautiful (+0.80)', 'disappointed (-0.70), dirty (-0.80), rude (-0.75)'],
             ['Wolof (WO)', 'dafa baax (+0.90), rafet (+0.80), baax (+0.85)', 'dafa neka (-0.80), amul solo (-0.70)'],
         ],
-        col_widths=[3, 7, 6]
+        largeurs=[3, 7.5, 5.5]
     )
-
-    ligne_vide(doc)
-    para(doc, 'Resultats du test lexical sur 5 avis :')
-
-    ajouter_tableau(doc,
-        ['Langue', 'Extrait de l\'avis', 'Score', 'Label'],
+    espace(doc)
+    para(doc, 'Resultats de validation sur 5 avis de test :')
+    espace(doc)
+    tableau(doc,
+        ['Langue', 'Extrait de l\'avis', 'Score calcule', 'Label attribue'],
         [
             ['FR', 'Magnifique sejour, teranga incroyable !', '+1.70', 'POSITIF'],
             ['EN', 'Too many touts, disappointed', '-1.20', 'NEGATIF'],
@@ -379,342 +353,380 @@ def section_spark(doc):
             ['FR', 'Plage sale, arnaque taxi', '-1.70', 'NEGATIF'],
             ['EN', 'Amazing beaches, would recommend!', '+1.65', 'POSITIF'],
         ],
-        col_widths=[2, 8, 2.5, 3.5]
+        largeurs=[2, 7.5, 3, 3.5]
     )
+    espace(doc)
 
-    ligne_vide(doc)
-    titre_para(doc, '4.3 Agregation reputation (fenetre glissante)', niveau=2)
-
+    titre2(doc, '4.3 Agregation de la reputation par fenetre glissante')
     para(doc,
-        'La reputation de chaque destination est calculee sur une fenetre glissante de '
-        '7 jours avec un pas d\'1 jour. Le watermark de 1 jour evite les fuites memoire '
-        'en ignorant les evenements arrives avec plus d\'un jour de retard.')
-
-    ajouter_code(doc,
-        'reputation_df = (\n'
-        '    avis_df\n'
-        '    .withWatermark("event_ts", "1 day")\n'
-        '    .groupBy(window("event_ts", "7 days", "1 day"), "destination")\n'
-        '    .agg(\n'
-        '        avg("note").alias("note_moy"),\n'
-        '        avg("sentiment_score").alias("sentiment_moy"),\n'
-        '        count("avis_id").alias("nb_avis"),\n'
-        '    )\n'
-        '    .withColumn("statut_reputation",\n'
-        '        when(col("sentiment_moy") < -0.3, "ROUGE")\n'
-        '        .when(col("sentiment_moy") < 0.0,  "ORANGE")\n'
-        '        .otherwise("VERT")\n'
-        '    )\n'
-        ')'
+        'La reputation d\'une destination est calculee sur les 7 derniers jours, '
+        'avec une mise a jour toutes les 24 heures. Ce choix de fenetre a ete fait '
+        'deliberement : une fenetre trop courte (1 jour) serait trop sensible aux '
+        'variations aleatoires, une fenetre trop longue (30 jours) masquerait une '
+        'crise qui eclate en quelques jours.')
+    espace(doc)
+    para(doc,
+        'Le watermark de 1 jour resout un probleme technique important : sans lui, '
+        'Spark garde en memoire l\'etat de toutes les fenetres passees indefiniment. '
+        'Sur un flux continu de 24h/24, cela provoquerait un OutOfMemoryError. '
+        'Le watermark dit a Spark : au-dela d\'un jour de retard, ignore l\'evenement '
+        'et libere la memoire de cette fenetre.')
+    espace(doc)
+    para(doc, 'Regles de classification de la reputation :')
+    tableau(doc,
+        ['Statut', 'Condition sur le score moyen', 'Action declenchee'],
+        [
+            ['VERT', 'Score moyen >= 0.0', 'Aucune alerte'],
+            ['ORANGE', 'Score moyen entre -0.3 et 0.0', 'Alerte ecrite dans HBase'],
+            ['ROUGE', 'Score moyen < -0.3', 'Alerte HBase + reentainement ML si 2+ destinations'],
+        ],
+        largeurs=[2.5, 6, 7.5]
     )
-
     doc.add_page_break()
 
 
-def section_hbase_hive(doc):
-    titre_para(doc, '5. Stockage : HBase et Hive')
-
-    titre_para(doc, '5.1 HBase - Stockage NoSQL temps reel', niveau=2)
+def stockage(doc):
+    titre1(doc, '5. Stockage des Donnees : HBase et Hive')
 
     para(doc,
-        'HBase stocke les donnees a haute velocite pour les requetes operationnelles. '
-        'Trois tables ont ete creees dans le namespace "teranga" :')
+        'Le projet utilise deux systemes de stockage complementaires. HBase pour '
+        'les acces rapides en lecture/ecriture operationnelle, et Hive pour les '
+        'requetes analytiques SQL sur l\'historique. Les deux ont des forces '
+        'differentes et se completent naturellement.')
+    espace(doc)
 
-    ajouter_tableau(doc,
-        ['Table HBase', 'Familles de colonnes', 'Usage'],
-        [
-            ['teranga:avis_analyses', 'meta, sentiment, geo', 'Avis enrichis apres Spark'],
-            ['teranga:alertes_reputation', 'alerte', 'Destinations ROUGE/ORANGE pour le DAG Airflow'],
-            ['teranga:stats_ecommerce', 'stats, meta', 'Agregats e-commerce par destination'],
-        ],
-        col_widths=[5, 5, 6]
-    )
-
-    ligne_vide(doc)
-    para(doc, 'Validation d\'ecriture et lecture dans HBase (test realise) :')
-    ajouter_code(doc,
-        '# Ecriture\n'
-        'table.put(b"TOUBA_20260505_001", {\n'
-        '    b"meta:destination":  b"TOUBA",\n'
-        '    b"sentiment:label":   b"NEGATIF",\n'
-        '    b"sentiment:score":   b"-0.9",\n'
-        '    b"geo:nationalite":   b"ES",\n'
-        '})\n'
-        '# Lecture => 9 colonnes restituees correctement'
-    )
-
-    ligne_vide(doc)
-    titre_para(doc, '5.2 Hive - Entrepot analytique', niveau=2)
-
+    titre2(doc, '5.1 HBase : le stockage NoSQL operationnel')
     para(doc,
-        'Hive stocke les donnees historiques dans un format colonnaire optimise '
-        '(ORC + compression SNAPPY) pour les requetes analytiques lentes.')
-
-    ajouter_tableau(doc,
-        ['Objet Hive', 'Type', 'Caracteristiques'],
+        'HBase est une base de donnees NoSQL orientee colonnes qui peut ecrire et '
+        'lire des millions de lignes par seconde. Dans Teranga-SN, il stocke les '
+        'donnees que Spark produit en temps reel et les alertes de reputation.')
+    espace(doc)
+    para(doc, 'Trois tables ont ete creees dans le namespace "teranga" :')
+    espace(doc)
+    tableau(doc,
+        ['Table HBase', 'Familles de colonnes', 'Contenu stocke'],
         [
-            ['avis_analyses', 'TABLE', 'ORC + SNAPPY, partitionnee par date_obs'],
-            ['ecommerce_transactions', 'TABLE', 'ORC, non partitionnee'],
-            ['vue_destinations', 'VIEW', 'Reputation 30 derniers jours, statut ROUGE/ORANGE/VERT'],
-            ['vue_ecommerce', 'VIEW', 'Top categories par region, CA total en FCFA'],
+            ['teranga:avis_analyses', 'meta, sentiment, geo', 'Chaque avis apres enrichissement Spark (destination, note, score, label)'],
+            ['teranga:alertes_reputation', 'alerte', 'Destinations en statut ROUGE ou ORANGE avec horodatage'],
+            ['teranga:stats_ecommerce', 'stats, meta', 'Agregats e-commerce par destination (CA, nb transactions)'],
         ],
-        col_widths=[5, 2.5, 8.5]
+        largeurs=[5, 4, 7]
     )
+    espace(doc)
+    para(doc,
+        'Le test d\'ecriture et de lecture realise confirme le bon fonctionnement : '
+        'une ligne inseree avec 9 colonnes est restituee integralement par la lecture '
+        'suivante. La connexion utilise le protocole Thrift sur le port 9090.')
+    espace(doc)
 
+    titre2(doc, '5.2 Hive : l\'entrepot analytique SQL')
+    para(doc,
+        'Hive permet d\'interroger les donnees historiques avec du SQL standard. '
+        'Les tables sont stockees au format ORC avec compression SNAPPY, ce qui '
+        'divise la taille des fichiers par 5 par rapport au format texte brut '
+        'et accelere les requetes analytiques.')
+    espace(doc)
+    para(doc, 'Le schema Hive de Teranga-SN comprend deux tables et deux vues :')
+    espace(doc)
+    tableau(doc,
+        ['Objet', 'Type', 'Description et justification technique'],
+        [
+            ['avis_analyses', 'TABLE', 'Partitionnee par date_obs (YYYY-MM-DD). Le partitionnement accelere les requetes sur les 30 derniers jours car Hive ne lit que les partitions concernees.'],
+            ['ecommerce_transactions', 'TABLE', 'Transactions e-commerce anonymisees, format ORC.'],
+            ['vue_destinations', 'VUE SQL', 'Calcule automatiquement la reputation de chaque destination sur les 30 derniers jours avec son statut ROUGE/ORANGE/VERT.'],
+            ['vue_ecommerce', 'VUE SQL', 'Classement des categories de produits par chiffre d\'affaires et par region de livraison.'],
+        ],
+        largeurs=[4, 2.5, 9.5]
+    )
     doc.add_page_break()
 
 
-def section_validation(doc):
-    titre_para(doc, '6. Validation et Tests')
-
-    titre_para(doc, '6.1 Tests unitaires Pandera (10/10)', niveau=2)
+def validation(doc):
+    titre1(doc, '6. Validation et Qualite des Donnees')
 
     para(doc,
-        'Le module Pandera valide la qualite des donnees et s\'assure qu\'aucune information '
-        'personnelle (PII) ne passe dans les couches de stockage. Dix tests sont definis :')
+        'La qualite des donnees est un enjeu critique dans un systeme Big Data. '
+        'Une donnee corrompue ou mal anonymisee peut compromettre l\'analyse entiere '
+        'ou violer le RGPD. Nous avons mis en place deux niveaux de validation.')
+    espace(doc)
 
-    ajouter_tableau(doc,
-        ['Test', 'Scenario', 'Resultat'],
+    titre2(doc, '6.1 Schemas Pandera : validation automatique')
+    para(doc,
+        'Pandera permet de definir des schemas de validation declaratifs pour les '
+        'DataFrames pandas. Chaque fois qu\'un batch de donnees entre dans la couche '
+        'de stockage, il est valide contre le schema correspondant. Si une contrainte '
+        'est violee, une exception est levee et les donnees ne sont pas ecrites.')
+    espace(doc)
+    para(doc,
+        'Un apport original de notre implementation : la validation verifie non '
+        'seulement les valeurs, mais aussi l\'absence de certaines colonnes. Si '
+        'user_id ou email_client sont encore presents dans le DataFrame a cette '
+        'etape, c\'est que l\'anonymisation a echoue. Le schema le detecte et bloque '
+        'l\'ingestion.')
+    espace(doc)
+
+    titre2(doc, '6.2 Resultats de la suite de tests (10/10)')
+    tableau(doc,
+        ['Test', 'Cas teste', 'Comportement attendu', 'Resultat'],
         [
-            ['test_avis_valide', 'DataFrame conforme aux contraintes', 'PASSED'],
-            ['test_avis_note_hors_intervalle', 'note = 6.0 (> 5.0)', 'PASSED'],
-            ['test_avis_destination_inconnue', 'destination = "PARIS"', 'PASSED'],
-            ['test_avis_pii_user_id_detecte', 'user_id present dans le DataFrame', 'PASSED'],
-            ['test_avis_pii_email_detecte', 'email_client present dans le DataFrame', 'PASSED'],
-            ['test_avis_sentiment_label_invalide', 'label = "TRES_POSITIF"', 'PASSED'],
-            ['test_ecomm_valide', 'Transaction e-commerce conforme', 'PASSED'],
-            ['test_ecomm_montant_negatif', 'montant_fcfa = -500.0', 'PASSED'],
-            ['test_ecomm_categorie_inconnue', 'categorie = "VOITURE"', 'PASSED'],
-            ['test_ecomm_pii_user_id_detecte', 'user_id present (e-commerce)', 'PASSED'],
+            ['test_avis_valide', 'DataFrame conforme', 'Validation OK, retour du DataFrame', 'PASSE'],
+            ['test_avis_note_hors_intervalle', 'note = 6.0 (maximum = 5.0)', 'SchemaErrors leve', 'PASSE'],
+            ['test_avis_destination_inconnue', 'destination = "PARIS"', 'SchemaErrors leve', 'PASSE'],
+            ['test_avis_pii_user_id_detecte', 'colonne user_id presente', 'SchemaErrors leve', 'PASSE'],
+            ['test_avis_pii_email_detecte', 'colonne email_client presente', 'SchemaErrors leve', 'PASSE'],
+            ['test_avis_sentiment_label_invalide', 'label = "TRES_POSITIF"', 'SchemaErrors leve', 'PASSE'],
+            ['test_ecomm_valide', 'Transaction conforme', 'Validation OK', 'PASSE'],
+            ['test_ecomm_montant_negatif', 'montant = -500 FCFA', 'SchemaErrors leve', 'PASSE'],
+            ['test_ecomm_categorie_inconnue', 'categorie = "VOITURE"', 'SchemaErrors leve', 'PASSE'],
+            ['test_ecomm_pii_user_id_detecte', 'user_id present (e-commerce)', 'SchemaErrors leve', 'PASSE'],
         ],
-        col_widths=[5.5, 6, 2.5]
+        largeurs=[5, 4, 4.5, 2.5]
     )
-
-    ligne_vide(doc)
-    ajouter_code(doc,
+    espace(doc)
+    bloc_code(doc,
         '$ python -m pytest tests/ -v\n'
-        '======================== 10 passed, 1 warning in 1.56s ========================'
+        '======== 10 passed, 1 warning in 1.56s ========'
     )
+    espace(doc)
 
-    ligne_vide(doc)
-    titre_para(doc, '6.2 Validation du pipeline Kafka', niveau=2)
-
-    para(doc,
-        'Le producteur Kafka a ete teste et les messages arrivent correctement dans les deux topics :')
-
-    ajouter_tableau(doc,
-        ['Topic', 'Messages', 'Contenu verifie'],
+    titre2(doc, '6.3 Validation du pipeline complet')
+    tableau(doc,
+        ['Composant', 'Test realise', 'Resultat observe'],
         [
-            ['teranga_avis_raw', '8 messages', 'JSON valide, user_id et email presents (a anonymiser)'],
-            ['teranga_arrivees_raw', '10 messages', 'Transactions e-commerce + arrivees DGTT'],
+            ['Kafka producer', 'Envoi de messages FR, EN et WO pendant 12 secondes', '8 messages dans teranga_avis_raw, 10 dans teranga_arrivees_raw'],
+            ['HBase ecriture', 'Insertion d\'un avis TOUBA avec 9 colonnes', 'Ligne inseree et relue integralement - OK'],
+            ['HBase alertes', 'Insertion d\'une alerte ROUGE pour TOUBA', 'Alerte stockee avec horodatage - OK'],
+            ['Hive schema', 'Chargement du fichier hive_setup.sql', 'Base teranga_sn, 2 tables, 2 vues creees - OK'],
+            ['Spark master', 'Demarrage du cluster standalone', 'Spark 4.1.1, worker de 2 Go enregistre - OK'],
+            ['Dashboard', 'Generation du PNG en mode demonstration', 'Fichier 299 Ko genere sans erreur - OK'],
         ],
-        col_widths=[5, 3, 8]
+        largeurs=[3.5, 6, 6.5]
     )
-
-    ligne_vide(doc)
-    titre_para(doc, '6.3 Validation HBase end-to-end', niveau=2)
-
-    para(doc,
-        'Un test complet d\'ecriture et lecture dans HBase a ete realise pour simuler '
-        'ce que Spark produirait apres traitement. La lecture restitue correctement les '
-        '9 colonnes ecrites avec leurs valeurs exactes.')
-
     doc.add_page_break()
 
 
-def section_ml(doc):
-    titre_para(doc, '7. Machine Learning : Prediction des Flux Touristiques')
+def machine_learning(doc):
+    titre1(doc, '7. Machine Learning : Prediction des Flux Touristiques')
 
     para(doc,
-        'Un modele Random Forest predit le nombre quotidien de touristes par destination '
-        'en fonction des caracteristiques saisonnieres et de la qualite perçue.')
+        'L\'objectif du modele de machine learning est de predire le nombre de '
+        'touristes attendus par destination et par jour. Cette prediction permet '
+        'a la DGTT d\'anticiper les periodes de forte affluence et d\'adapter '
+        'ses ressources (guides, securite, capacite hoteliere).')
+    espace(doc)
 
-    ligne_vide(doc)
-    titre_para(doc, '7.1 Features et donnees d\'entrainement', niveau=2)
+    titre2(doc, '7.1 Choix du modele : Random Forest')
+    para(doc,
+        'Nous avons choisi le Random Forest pour trois raisons. Premierement, '
+        'il gere nativement les variables categorielles encodees sans necessiter '
+        'de normalisation. Deuxiemement, il est robust au bruit et aux valeurs '
+        'aberrantes, ce qui est important avec des donnees touristiques reelles. '
+        'Troisiemement, le calcul d\'importance des features nous permet d\'expliquer '
+        'a la DGTT pourquoi le modele predit ce qu\'il predit, ce qu\'un reseau de '
+        'neurones ne permettrait pas facilement.')
+    espace(doc)
 
-    ajouter_tableau(doc,
-        ['Feature', 'Type', 'Description'],
+    titre2(doc, '7.2 Features utilisees')
+    tableau(doc,
+        ['Feature', 'Type', 'Justification metier'],
         [
-            ['destination_enc', 'categorielle encodee', '7 destinations senegalaises'],
-            ['nationalite_enc', 'categorielle encodee', '8 nationalites principales'],
-            ['type_activite_enc', 'categorielle encodee', '6 types d\'activite'],
-            ['mois', 'numerique (1-12)', 'Capture la saisonnalite'],
-            ['note_moy', 'numerique [2.5, 5.0]', 'Note moyenne de la destination'],
-            ['sentiment_moy', 'numerique [-0.8, 0.9]', 'Score sentiment agregee'],
+            ['mois (1 a 12)', 'Numerique', 'Variable la plus predictive : haute saison novembre-mars (touristes europeens fuyant l\'hiver)'],
+            ['destination_enc', 'Categorielle encodee', 'Dakar, Saly et Saint-Louis attirent structurellement plus de visiteurs'],
+            ['sentiment_moy', 'Numerique [-1, 1]', 'Une bonne reputation attire davantage de touristes les semaines suivantes'],
+            ['note_moy', 'Numerique [2.5, 5.0]', 'Corroboree avec le sentiment pour detecter des incoherences'],
+            ['nationalite_enc', 'Categorielle encodee', 'Les Europeens visitent en hiver, les Africains de la sous-region toute l\'annee'],
+            ['type_activite_enc', 'Categorielle encodee', 'Le pelerinage a Touba genere des pics tres specifiques'],
         ],
-        col_widths=[5, 4, 7]
+        largeurs=[4, 3.5, 8.5]
     )
+    espace(doc)
 
-    ligne_vide(doc)
-    para(doc,
-        'Le dataset d\'entrainement est genere a partir de regles metier calees sur '
-        'la realite senegalaise : haute saison novembre-mars (+150 touristes/jour), '
-        'bonus pour Dakar/Saly/Saint-Louis (+100), plus un bruit gaussien (sigma=30).')
-
-    ligne_vide(doc)
-    titre_para(doc, '7.2 Resultats du modele', niveau=2)
-
-    ajouter_tableau(doc,
-        ['Metrique', 'Valeur', 'Interpretation'],
+    titre2(doc, '7.3 Resultats et evaluation')
+    tableau(doc,
+        ['Metrique', 'Valeur obtenue', 'Interpretation'],
         [
-            ['RMSE', '31.23 touristes/jour', 'Erreur moyenne de prediction'],
-            ['R2 (test set)', '0.9005', 'Le modele explique 90% de la variance'],
-            ['R2 (cross-val 5-fold)', '0.8989', 'Bonne generalisation, pas de sur-apprentissage'],
-            ['Dataset', '5000 observations', '80% train / 20% test'],
-            ['Hyperparametres', 'n_estimators=150, max_depth=10', 'Optimises manuellement'],
+            ['RMSE', '31.23 touristes/jour', 'En moyenne, le modele se trompe de 31 touristes par jour - acceptable pour la planification'],
+            ['R2 sur le jeu de test', '0.9005', 'Le modele explique 90% de la variance des flux touristiques'],
+            ['R2 en validation croisee (5 plis)', '0.8989', 'L\'ecart avec le R2 test est faible : pas de sur-apprentissage'],
+            ['Jeu de donnees', '5000 observations', '80% pour l\'entrainement, 20% pour le test'],
         ],
-        col_widths=[5, 5, 6]
+        largeurs=[5, 4.5, 6.5]
     )
-
-    ligne_vide(doc)
+    espace(doc)
     para(doc,
-        'Le suivi des experiences est assure par MLflow. Chaque entrainement logue '
-        'automatiquement les parametres, les metriques et le modele serialise. '
-        'En production, le DAG Airflow declenche un reentainement si plus d\'une '
-        'destination passe en statut ROUGE.')
-
+        'Le suivi des experiences est assure par MLflow. Chaque entrainement enregistre '
+        'automatiquement les hyperparametres, les metriques et le modele serialise. '
+        'Cela permet de comparer les versions et de revenir a un modele anterieur '
+        'si une nouvelle version est moins performante.')
     doc.add_page_break()
 
 
-def section_airflow(doc):
-    titre_para(doc, '8. Orchestration : DAG Airflow')
+def airflow(doc):
+    titre1(doc, '8. Orchestration : Le DAG Airflow')
 
     para(doc,
-        'Le DAG teranga_sn_monitoring s\'execute chaque lundi a 07h00 et suit '
-        'une logique de branchement conditionnelle (MLOps) :')
+        'Apache Airflow orchestre le cycle de vie du systeme. Le DAG '
+        'teranga_sn_monitoring s\'execute chaque lundi a 7h00 du matin '
+        'et suit une logique de branchement conditionnel appelee MLOps : '
+        'si la qualite des donnees se degrade, le systeme reagit automatiquement.')
+    espace(doc)
 
-    ligne_vide(doc)
+    titre2(doc, '8.1 Logique de branchement')
+    para(doc,
+        'La tache check_reputation interroge la vue Hive vue_destinations et compte '
+        'le nombre de destinations en statut ROUGE. Cette valeur pilote la suite :')
+    espace(doc)
+    tableau(doc,
+        ['Condition', 'Branche executee', 'Action'],
+        [
+            ['1 ou 0 destination ROUGE', 'update_dashboard', 'Mise a jour des alertes HBase, pas de reentainement'],
+            ['2 destinations ROUGE ou plus', 'retrain_model puis update_dashboard', 'Reentainement du Random Forest via spark-submit, puis mise a jour'],
+        ],
+        largeurs=[5, 5, 6]
+    )
+    espace(doc)
+    para(doc,
+        'Cette logique evite de reentainer le modele a chaque execution inutilement. '
+        'Le reentainement n\'est declenche que lorsque la situation sur le terrain '
+        'change suffisamment pour que les predictions du modele actuel deviennent '
+        'potentiellement obsoletes.')
+    espace(doc)
 
-    ajouter_tableau(doc,
-        ['Tache', 'Type', 'Action'],
+    titre2(doc, '8.2 Taches du DAG')
+    tableau(doc,
+        ['Tache', 'Type Airflow', 'Description'],
         [
             ['start', 'DummyOperator', 'Point d\'entree du workflow'],
-            ['check_reputation', 'BranchPythonOperator', 'Compte destinations ROUGE dans Hive'],
-            ['retrain_model', 'PythonOperator', 'spark-submit train_flux_model.py si n_rouge > 1'],
-            ['update_dashboard', 'PythonOperator', 'Ecrit alertes ROUGE/ORANGE dans HBase'],
-            ['generer_rapport_semaine', 'PythonOperator', 'Export JSON des KPIs hebdomadaires'],
-            ['end', 'DummyOperator', 'Point de sortie (trigger_rule: none_failed)'],
+            ['check_reputation', 'BranchPythonOperator', 'Interroge Hive, compte les ROUGE, choisit la branche'],
+            ['retrain_model', 'PythonOperator', 'Lance spark-submit sur train_flux_model.py'],
+            ['update_dashboard', 'PythonOperator', 'Ecrit les alertes ROUGE/ORANGE dans HBase'],
+            ['generer_rapport_semaine', 'PythonOperator', 'Exporte un fichier JSON de synthese des KPIs'],
+            ['end', 'DummyOperator', 'Convergence des branches (trigger rule : none_failed)'],
         ],
-        col_widths=[4.5, 4.5, 7]
+        largeurs=[4.5, 4.5, 7]
     )
-
-    ligne_vide(doc)
+    espace(doc)
     para(doc,
         'L\'interface Airflow est accessible sur http://localhost:8082 '
-        '(identifiants : admin / admin). Le DAG apparait dans la liste avec le tag '
-        '"teranga-sn".')
-
+        '(identifiants : admin / admin). Le DAG apparait avec les tags '
+        'teranga-sn, tourisme, ecommerce et mlops.')
     doc.add_page_break()
 
 
-def section_dashboard(doc):
-    titre_para(doc, '9. Dashboard de Visualisation')
+def dashboard(doc):
+    titre1(doc, '9. Tableau de Bord de Decision')
 
     para(doc,
-        'Le tableau de bord genere par dashboard_teranga_sn.py presente quatre panneaux '
-        'destines aux decideurs de la DGTT. Il fonctionne en mode demonstration si Hive '
-        'n\'est pas disponible.')
-
-    ligne_vide(doc)
-
-    ajouter_tableau(doc,
-        ['Panneau', 'Type de graphe', 'Indicateur'],
+        'Le tableau de bord est l\'interface finale entre le systeme Big Data et '
+        'les decideurs de la DGTT. Il est concu pour etre lisible en quelques '
+        'secondes, sans connaissance technique. Il fonctionne en mode demonstration '
+        'si Hive n\'est pas disponible.')
+    espace(doc)
+    tableau(doc,
+        ['Panneau', 'Visualisation', 'Lecture rapide pour le decideur'],
         [
-            ['1 (haut gauche)', 'Barres horizontales colorees', 'Note moyenne par destination - couleur selon statut reputation'],
-            ['2 (haut droite)', 'Barres groupees', '% avis positifs vs negatifs par destination'],
-            ['3 (bas gauche)', 'Barres horizontales', 'CA e-commerce par categorie (millions FCFA)'],
-            ['4 (bas droite)', 'Heatmap', 'CA par region x categorie de produit'],
+            ['Haut gauche', 'Barres horizontales colorees (vert/orange/rouge)', 'D\'un coup d\'oeil : quelles destinations ont des problemes et quelle est leur note'],
+            ['Haut droite', 'Barres groupees positif vs negatif', 'Quelle proportion des avis sont negatifs pour chaque destination'],
+            ['Bas gauche', 'Barres par categorie e-commerce', 'Quels secteurs generent le plus de chiffre d\'affaires'],
+            ['Bas droite', 'Heatmap region x categorie', 'Ou se concentrent les achats par type de produit'],
         ],
-        col_widths=[3.5, 4, 8.5]
+        largeurs=[2.5, 5, 8.5]
     )
-
-    ligne_vide(doc)
-
-    img_path = os.path.join(DATA_DIR, 'dashboard_teranga_sn.png')
-    if os.path.exists(img_path):
-        doc.add_picture(img_path, width=Inches(6.2))
-        p = doc.paragraphs[-1]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cap = doc.add_paragraph('Figure 1 - Dashboard Teranga-SN (mode demonstration)')
-        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cap.runs[0].font.size = Pt(9)
-        cap.runs[0].italic = True
-        cap.runs[0].font.color.rgb = GRIS
-
+    espace(doc)
+    img = os.path.join(DATA_DIR, 'dashboard_teranga_sn.png')
+    if os.path.exists(img):
+        doc.add_picture(img, width=Inches(6.0))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        para(doc, 'Figure 1 - Tableau de bord Teranga-SN genere par dashboard_teranga_sn.py', taille=9, italique=True, centre=True)
     doc.add_page_break()
 
 
-def section_conclusion(doc):
-    titre_para(doc, '10. Conclusion et Perspectives')
+def conclusion(doc):
+    titre1(doc, '10. Conclusion et Perspectives')
 
     para(doc,
-        'Le projet Teranga-SN constitue une demonstration complete d\'une architecture '
-        'Big Data moderne appliquee au secteur touristique senegalais. En trois semaines '
-        'de developpement, l\'equipe Eq.12 a mis en place :')
+        'En trois semaines, l\'equipe Eq.12 a concu et deploye une plateforme Big Data '
+        'complete, fonctionnelle et testee, appliquee a un secteur strategique du Senegal. '
+        'Chaque composant technique a ete valide individuellement, et le pipeline de bout '
+        'en bout a ete teste de l\'ingestion Kafka jusqu\'a l\'ecriture dans HBase.')
+    espace(doc)
+    para(doc,
+        'Ce projet nous a appris plusieurs lecons importantes. D\'abord, que la '
+        'complexite en Big Data vient rarement des algorithmes eux-memes, mais de '
+        'la coordination entre les services. Faire communiquer Kafka, Spark et HBase '
+        'dans un reseau Docker demande de comprendre les protocols de chaque outil. '
+        'Ensuite, que la qualite des donnees doit etre traitee des le debut du pipeline, '
+        'pas a la fin. Les tests Pandera nous ont permis de detecter des erreurs '
+        'd\'anonymisation qui auraient pu passer inapercues.')
+    espace(doc)
 
-    for item in [
-        '8 services Docker integres et valides (Kafka, NiFi, HBase, Hive, Spark, Airflow)',
-        'Un pipeline de traitement NLP multilingue (FR/EN/WO) avec Privacy by Design',
-        'Un modele de prediction Random Forest avec R2=0.90 et suivi MLflow',
-        'Une suite de 10 tests Pandera garantissant la qualite des donnees',
-        'Un tableau de bord interactif pour la DGTT',
-    ]:
-        p = doc.add_paragraph(item, style='List Bullet')
-        p.runs[0].font.size = Pt(11)
-
-    ligne_vide(doc)
-    titre_para(doc, '10.1 Points d\'amelioration identifies', niveau=2)
-
-    ajouter_tableau(doc,
-        ['Axe', 'Amelioration possible'],
+    titre2(doc, '10.1 Bilan technique')
+    tableau(doc,
+        ['Livrable', 'Etat'],
         [
-            ['Lexique Wolof', 'Enrichissement avec des locuteurs natifs (tache binome Abdoussalam)'],
-            ['NLP', 'Integration d\'un modele transformeur (CamemBERT, XLM-RoBERTa) pour le FR/EN'],
-            ['HBase TTL', 'Configurer l\'expiration automatique des alertes apres 7 jours'],
-            ['NiFi', 'Connexion directe a l\'API REST TripAdvisor pour les donnees reelles'],
-            ['Deploiement', 'Migration vers Kubernetes pour la scalabilite en production'],
+            ['8 services Docker integres et valides', 'Termine'],
+            ['Pipeline Kafka : 2 topics, producteur Python + NiFi', 'Termine'],
+            ['Spark Streaming : NLP + SHA-256 + watermark 1 jour', 'Termine'],
+            ['HBase : 3 tables dans namespace teranga, lecture/ecriture validees', 'Termine'],
+            ['Hive : base teranga_sn, 2 tables ORC/SNAPPY, 2 vues analytiques', 'Termine'],
+            ['Pandera : 10 tests de validation de schema (10/10)', 'Termine'],
+            ['Random Forest : RMSE=31.23, R2=0.90, suivi MLflow', 'Termine'],
+            ['Airflow DAG : monitoring hebdomadaire avec branchement MLOps', 'Termine'],
+            ['Dashboard : 4 panneaux de visualisation generes en PNG', 'Termine'],
+            ['Rapport final et documentation binome (TINE_ONBOARDING.md)', 'Termine'],
         ],
-        col_widths=[4, 12]
+        largeurs=[12, 4]
     )
+    espace(doc)
 
-    ligne_vide(doc)
+    titre2(doc, '10.2 Axes d\'amelioration identifies')
+    tableau(doc,
+        ['Axe', 'Amelioration envisagee'],
+        [
+            ['Lexique Wolof', 'Enrichissement avec des locuteurs natifs pour couvrir les expressions idiomatiques et les variations dialectales'],
+            ['Modele NLP', 'Remplacer le lexique par un modele transformeur (CamemBERT ou XLM-RoBERTa) pour le francais et l\'anglais'],
+            ['HBase TTL', 'Configurer l\'expiration automatique des alertes apres 7 jours pour ne pas saturer la memoire'],
+            ['NiFi REST', 'Connecter NiFi directement a l\'API REST TripAdvisor pour remplacer les donnees simulees par des donnees reelles'],
+            ['Scalabilite', 'Migrer vers Kubernetes pour gerer des pics de charge lors des grands evenements touristiques'],
+        ],
+        largeurs=[4, 12]
+    )
+    espace(doc)
     para(doc,
-        'Ce projet nous a permis de comprendre les enjeux concrets du Big Data applique '
-        'a un secteur strategique senegalais. La combinaison Kafka + Spark Streaming + '
-        'HBase + Hive forme un socle solide sur lequel des analyses plus profondes '
-        'pourront etre construites.',
-        italique=True, couleur=GRIS
+        'Le code source complet est disponible sur le depot GitHub : '
+        'https://github.com/pa-malick/uadb-m2-teranga-sn',
+        italique=True
     )
 
 
 def main():
     doc = Document()
 
-    # Marges
     for section in doc.sections:
-        section.top_margin    = Cm(2.0)
-        section.bottom_margin = Cm(2.0)
-        section.left_margin   = Cm(2.5)
+        section.top_margin    = Cm(2.5)
+        section.bottom_margin = Cm(2.5)
+        section.left_margin   = Cm(3.0)
         section.right_margin  = Cm(2.5)
 
-    # Police par defaut
     doc.styles['Normal'].font.name = 'Calibri'
     doc.styles['Normal'].font.size = Pt(11)
 
     page_titre(doc)
-    section_introduction(doc)
-    section_architecture(doc)
-    section_kafka(doc)
-    section_spark(doc)
-    section_hbase_hive(doc)
-    section_validation(doc)
-    section_ml(doc)
-    section_airflow(doc)
-    section_dashboard(doc)
-    section_conclusion(doc)
+    resume(doc)
+    introduction(doc)
+    architecture(doc)
+    kafka_nifi(doc)
+    spark(doc)
+    stockage(doc)
+    validation(doc)
+    machine_learning(doc)
+    airflow(doc)
+    dashboard(doc)
+    conclusion(doc)
 
     doc.save(OUT_PATH)
     print(f'Rapport genere : {OUT_PATH}')
+    print(f'Taille : {os.path.getsize(OUT_PATH) // 1024} Ko')
 
 
 if __name__ == '__main__':
