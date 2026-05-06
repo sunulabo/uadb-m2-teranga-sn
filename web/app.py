@@ -1,6 +1,6 @@
 # web/app.py
 # Application web Teranga-SN - Dashboard interactif + API prediction
-# Flask + Bootstrap 5 - fonctionne en mode demo si le modele n'est pas charge
+# Flask + Bootstrap 5
 
 import os
 import json

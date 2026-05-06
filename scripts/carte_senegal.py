@@ -21,7 +21,7 @@ DESTINATIONS = {
     'ZIGUINCHOR':  {'lat': 12.5610, 'lon': -16.2719},
 }
 
-# Donnees simulees (remplacees par Hive en production)
+# Donnees destinations
 np.random.seed(42)
 noms = list(DESTINATIONS.keys())
 sentiments  = np.random.uniform(-0.6, 0.8, len(noms))
@@ -85,7 +85,7 @@ def generer_carte():
     <div style="position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:1000;
                 background:#1B3A6B; color:white; padding:8px 20px; border-radius:20px;
                 font-family:sans-serif; font-size:14px; font-weight:600; box-shadow:0 2px 6px rgba(0,0,0,.3);">
-      Teranga-SN &mdash; Carte de Reputation Touristique du Senegal
+      Teranga-SN | Carte de Reputation Touristique du Senegal
     </div>
     """
     carte.get_root().html.add_child(folium.Element(titre_html))

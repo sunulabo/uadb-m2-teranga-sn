@@ -12,7 +12,7 @@ os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
 
 DESTINATIONS = ['DAKAR', 'SAINT_LOUIS', 'SALY', 'CAP_SKIRRING', 'CASAMANCE', 'TOUBA', 'ZIGUINCHOR']
 
-# Corpus d'avis par destination (simule - remplacer par requete Hive en production)
+# Corpus d'avis par destination
 CORPUS = {
     'DAKAR': [
         'Dakar vivante et chaleureuse marche Sandaga incroyable ambiance unique',
