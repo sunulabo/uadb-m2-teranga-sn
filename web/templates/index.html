@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teranga-SN | Intelligence Touristique</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <style>
+    :root { --teranga-blue: #1B3A6B; --teranga-orange: #F0A500; }
+    body  { background: #f5f7fa; font-family: 'Segoe UI', sans-serif; }
+
+    .navbar-brand span { color: var(--teranga-orange); }
+    .navbar { background: var(--teranga-blue) !important; }
+
+    .kpi-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .kpi-card .icon { font-size: 2rem; }
+
+    .statut-VERT   { background: #d4edda; color: #155724; border-radius: 6px; padding: 2px 10px; font-weight: 600; }
+    .statut-ORANGE { background: #fff3cd; color: #856404; border-radius: 6px; padding: 2px 10px; font-weight: 600; }
+    .statut-ROUGE  { background: #f8d7da; color: #721c24; border-radius: 6px; padding: 2px 10px; font-weight: 600; }
+
+    .section-title { color: var(--teranga-blue); font-weight: 700; border-left: 4px solid var(--teranga-orange); padding-left: 12px; margin-bottom: 20px; }
+    .predict-card  { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    #result-box    { display: none; border-radius: 10px; }
+
+    .btn-teranga   { background: var(--teranga-blue); color: white; border: none; }
+    .btn-teranga:hover { background: #2a5298; color: white; }
+
+    footer { background: var(--teranga-blue); color: #aab8cc; font-size: .85rem; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark px-4 py-3">
+  <span class="navbar-brand fs-5 fw-bold">
+    <i class="bi bi-geo-alt-fill me-2"></i>Teranga<span>-SN</span>
+  </span>
+  <span class="text-white-50 small">Intelligence Touristique & Economie Numerique | UADB Eq.12</span>
+  {% if carte_disponible %}
+  <a href="/carte" target="_blank" class="btn btn-sm btn-outline-light">
+    <i class="bi bi-map me-1"></i>Carte interactive
+  </a>
+  {% endif %}
+</nav>
+
+<div class="container py-4">
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3 text-center">
+        <div class="icon text-success mb-1"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="fs-4 fw-bold text-success">{{ nb_vert }}</div>
+        <div class="text-muted small">Destinations VERT</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3 text-center">
+        <div class="icon text-warning mb-1"><i class="bi bi-exclamation-circle-fill"></i></div>
+        <div class="fs-4 fw-bold text-warning">{{ nb_orange }}</div>
+        <div class="text-muted small">Destinations ORANGE</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3 text-center">
+        <div class="icon text-danger mb-1"><i class="bi bi-x-circle-fill"></i></div>
+        <div class="fs-4 fw-bold text-danger">{{ nb_rouge }}</div>
+        <div class="text-muted small">Destinations ROUGE</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3 text-center">
+        <div class="icon mb-1" style="color:var(--teranga-blue)"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="fs-4 fw-bold" style="color:var(--teranga-blue)">
+          {{ metriques.r2 if metriques.r2 else 'N/A' }}
+        </div>
+        <div class="text-muted small">R² Random Forest</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metriques ML -->
+  {% if metriques %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card kpi-card p-3">
+        <div class="row text-center">
+          <div class="col">
+            <div class="text-muted small">RMSE</div>
+            <div class="fw-bold">{{ metriques.rmse }} touristes/j</div>
+          </div>
+          <div class="col border-start">
+            <div class="text-muted small">R²</div>
+            <div class="fw-bold">{{ metriques.r2 }}</div>
+          </div>
+          <div class="col border-start">
+            <div class="text-muted small">CV R²</div>
+            <div class="fw-bold">{{ metriques.cv_r2 }}</div>
+          </div>
+          <div class="col border-start">
+            <div class="text-muted small">Donnees train</div>
+            <div class="fw-bold">{{ metriques.n_train }}</div>
+          </div>
+          <div class="col border-start">
+            <div class="text-muted small">Donnees test</div>
+            <div class="fw-bold">{{ metriques.n_test }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- Tableau destinations -->
+    <div class="col-lg-7">
+      <h5 class="section-title"><i class="bi bi-pin-map me-2"></i>Reputation par destination</h5>
+      <div class="card kpi-card p-0 overflow-hidden">
+        <table class="table table-hover mb-0">
+          <thead style="background:var(--teranga-blue); color:white;">
+            <tr>
+              <th>Destination</th>
+              <th class="text-center">Note /5</th>
+              <th class="text-center">Avis</th>
+              <th class="text-center">% Positif</th>
+              <th class="text-center">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in destinations %}
+            <tr>
+              <td class="fw-semibold">{{ d.destination }}</td>
+              <td class="text-center">{{ d.note }}</td>
+              <td class="text-center">{{ d.nb_avis }}</td>
+              <td class="text-center">{{ d.pct_positif }}%</td>
+              <td class="text-center">
+                <span class="statut-{{ d.statut }}">{{ d.statut }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mots-cles TF-IDF -->
+      {% if keywords %}
+      <h5 class="section-title mt-4"><i class="bi bi-chat-quote me-2"></i>Mots-cles des avis (TF-IDF)</h5>
+      <div class="row g-2">
+        {% for dest, kws in keywords.items() %}
+        <div class="col-6">
+          <div class="card kpi-card p-2">
+            <div class="fw-semibold small mb-1" style="color:var(--teranga-blue)">{{ dest }}</div>
+            <div>
+              {% for kw in kws %}
+              <span class="badge bg-light text-dark me-1 mb-1">{{ kw }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Formulaire prediction -->
+    <div class="col-lg-5">
+      <h5 class="section-title"><i class="bi bi-cpu me-2"></i>Prediction de flux touristique</h5>
+      <div class="card predict-card p-4">
+        <form id="predict-form">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Destination</label>
+            <select class="form-select" name="destination" required>
+              {% for d in destinations_list %}
+              <option value="{{ d }}">{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Mois</label>
+            <select class="form-select" name="mois" required>
+              {% for i, m in mois_labels %}
+              <option value="{{ i }}" {% if i == 12 %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type d'activite</label>
+            <select class="form-select" name="type_activite">
+              {% for t in types_activite %}
+              <option value="{{ t }}">{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Note moyenne anticipee</label>
+            <input type="range" class="form-range" name="note_moy" min="1" max="5" step="0.1" value="4.0"
+                   oninput="document.getElementById('note-val').textContent=this.value"/>
+            <div class="text-end small text-muted">Note : <span id="note-val">4.0</span> / 5</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Score sentiment anticipe</label>
+            <input type="range" class="form-range" name="sentiment_moy" min="-1" max="1" step="0.1" value="0.3"
+                   oninput="document.getElementById('sent-val').textContent=this.value"/>
+            <div class="text-end small text-muted">Sentiment : <span id="sent-val">0.3</span></div>
+          </div>
+          <button type="submit" class="btn btn-teranga w-100 py-2 fw-semibold">
+            <i class="bi bi-lightning-fill me-2"></i>Predire le flux
+          </button>
+        </form>
+
+        <!-- Resultat -->
+        <div id="result-box" class="mt-4 p-3 text-center" style="background:#eef4ff; border:2px solid var(--teranga-blue); border-radius:10px;">
+          <div class="text-muted small mb-1" id="result-label"></div>
+          <div class="display-5 fw-bold" style="color:var(--teranga-blue);" id="result-flux"></div>
+          <div class="text-muted small" id="result-saison"></div>
+          <div class="badge bg-secondary mt-2" id="result-mode"></div>
+        </div>
+      </div>
+
+      <!-- Liens rapides -->
+      <div class="mt-3 d-grid gap-2">
+        {% if carte_disponible %}
+        <a href="/carte" target="_blank" class="btn btn-outline-primary">
+          <i class="bi bi-map me-2"></i>Ouvrir la carte interactive du Senegal
+        </a>
+        {% endif %}
+        <a href="/static/dashboard_teranga_sn.png" target="_blank" class="btn btn-outline-secondary">
+          <i class="bi bi-bar-chart me-2"></i>Voir le dashboard analytique
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="text-center py-3 mt-5">
+  Teranga-SN &mdash; Eq.12 | UADB Master 2 DSGL 2025-2026
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById('predict-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  const payload = Object.fromEntries(fd.entries());
+
+  const btn = this.querySelector('button[type=submit]');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Calcul...';
+
+  try {
+    const res  = await fetch('/predict', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    document.getElementById('result-label').textContent  = data.destination + ' - ' + data.mois;
+    document.getElementById('result-flux').textContent   = data.flux_predit + ' touristes/jour';
+    document.getElementById('result-saison').textContent = data.saison;
+    document.getElementById('result-mode').textContent   = 'Modele : ' + data.mode;
+    document.getElementById('result-box').style.display  = 'block';
+  } catch(err) {
+    alert('Erreur lors de la prediction.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-lightning-fill me-2"></i>Predire le flux';
+  }
+});
+</script>
+</body>
+</html>

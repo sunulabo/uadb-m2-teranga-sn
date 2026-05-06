@@ -62,10 +62,23 @@ python dashboard/dashboard_teranga_sn.py
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
+| **Teranga-SN Web App** | http://localhost:5000 | — |
 | NiFi    | http://localhost:8081 | admin / teranga2025! |
 | Spark   | http://localhost:8080 | — |
 | HBase   | http://localhost:16010 | — |
 | Airflow | http://localhost:8082 | admin / admin |
+
+## Lancer l'application web
+
+```bash
+# Generer les donnees necessaires
+python scripts/analyse_keywords.py
+python scripts/carte_senegal.py
+
+# Demarrer le serveur Flask
+python web/app.py
+# Ouvrir http://localhost:5000
+```
 
 ## Métriques ML (Random Forest)
 
@@ -78,12 +91,17 @@ python dashboard/dashboard_teranga_sn.py
 ## Structure du dépôt
 
 ```
+web/
+  app.py                         # Application Flask (dashboard + API prediction)
+  templates/index.html           # Interface Bootstrap 5
 scripts/
   kafka_producer_teranga_sn.py   # Simulateur données (avis + e-commerce)
   schema_pandera.py              # Validation schémas + Privacy
   hbase_setup.py                 # Création tables HBase
   streaming_teranga_sn.py        # Pipeline Spark Streaming NLP
   train_flux_model.py            # Entraînement Random Forest + MLflow
+  carte_senegal.py               # Carte Folium interactive des destinations
+  analyse_keywords.py            # Extraction TF-IDF mots-clés par destination
   exploration_rapide.py          # Exploration initiale des données
 dags/
   teranga_sn_dag.py              # DAG Airflow MLOps hebdomadaire
