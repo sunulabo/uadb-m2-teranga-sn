@@ -1,7 +1,6 @@
 # dashboard_teranga_sn.py
 # Dashboard graphique Teranga-SN - Eq.12
 # Satisfaction touristique + tendances e-commerce + alertes reputation
-# Fonctionne en mode standalone (donnees simulees) si Hive n'est pas disponible
 
 import os
 import numpy as np

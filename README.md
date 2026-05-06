@@ -1,4 +1,4 @@
-# Teranga-SN — Intelligence Touristique & Économie Numérique
+# Teranga-SN - Intelligence Touristique et Economie Numerique
 
 **Eq.12 | Master 2 DSGL UADB Bambey | 2025-2026**
 
@@ -32,7 +32,7 @@
 
 ```bash
 # 1. Cloner le dépôt
-git clone https://github.com/sunulabo/uadb-m2-teranga-sn.git
+git clone https://github.com/pa-malick/uadb-m2-teranga-sn.git
 cd uadb-m2-teranga-sn
 
 # 2. Configurer les variables d'environnement
@@ -62,10 +62,10 @@ python dashboard/dashboard_teranga_sn.py
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| **Teranga-SN Web App** | http://localhost:5000 | — |
+| **Teranga-SN Web App** | http://localhost:5000 | - |
 | NiFi    | http://localhost:8081 | admin / teranga2025! |
-| Spark   | http://localhost:8080 | — |
-| HBase   | http://localhost:16010 | — |
+| Spark   | http://localhost:8080 | - |
+| HBase   | http://localhost:16010 | - |
 | Airflow | http://localhost:8082 | admin / admin |
 
 ## Lancer l'application web

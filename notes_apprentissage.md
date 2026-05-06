@@ -1,4 +1,4 @@
-# Notes d'apprentissage — Teranga-SN
+# Notes d'apprentissage - Teranga-SN
 **NDIAYE Papa Malick | Eq.12**
 
 Quelques réflexions personnelles au fil du développement.
@@ -21,7 +21,7 @@ DataFrame. C'est exactement ce dont on avait besoin pour vérifier que le PII
 ### La saisonnalité sénégalaise
 En explorant les données, j'ai réalisé que la haute saison touristique au Sénégal
 (novembre-mars) coïncide avec l'hiver européen. C'est pour ça que le modèle Random
-Forest utilise le mois comme feature — c'est la variable la plus prédictive.
+Forest utilise le mois comme feature - c'est la variable la plus prédictive.
 
 ### Watermark dans Spark Streaming
 Sans watermark, Spark garde en mémoire l'état de **toutes** les fenêtres de temps
