@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Teranga-SN - Intelligence Touristique et Economie Numerique
 
 **Eq.12 | Master 2 DSGL UADB Bambey | 2025-2026**
@@ -130,3 +131,4 @@ README.md
 - Drop des colonnes PII (`email_client`) avant HBase/Hive
 - Sel stocké en variable d'environnement (jamais en clair dans le code)
 - Validation Pandera avec contrôle d'absence de PII
+
