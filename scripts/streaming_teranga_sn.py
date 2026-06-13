@@ -3,19 +3,26 @@
 # NLP sentiment FR/EN/WO + Privacy by Design + agregation reputation destination
 
 import os
+import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, sha2, concat, lit, from_json, to_json, struct,
-    window, avg, count, when, coalesce, udf, current_timestamp,
+    window, avg, count, when, coalesce, udf, to_timestamp,
     sum as spark_sum,
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, FloatType
 )
+from lexique import LEXIQUE
 
 # Configuration generale
-KAFKA_SERVERS = os.environ.get('KAFKA_SERVERS', 'kafka:9092')
-SALT          = os.environ.get('TERANGA_SECRET_SALT', 'teranga_salt_uadb_2025')
+KAFKA_SERVERS    = os.environ.get('KAFKA_SERVERS', 'kafka:9092')
+CHECKPOINT_BASE  = os.environ.get('TERANGA_CHECKPOINT_DIR', '/opt/teranga/checkpoints')
+
+SALT = os.environ.get('TERANGA_SECRET_SALT')
+if not SALT:
+    print('ERREUR : variable TERANGA_SECRET_SALT non definie. Refus de demarrer sans sel cryptographique.')
+    sys.exit(1)
 
 spark = (
     SparkSession.builder
@@ -26,38 +33,8 @@ spark = (
 )
 spark.sparkContext.setLogLevel('WARN')
 
-# Lexique sentiment FR/EN/Wolof pour le domaine touristique senegalais
-LEXIQUE = {
-    # Positif FR
-    'magnifique': 0.90, 'excellent': 0.90, 'superbe': 0.85,
-    'teranga': 0.80, 'chaleureux': 0.75, 'delicieux': 0.80,
-    'incontournable': 0.70, 'parfait': 0.85, 'sympa': 0.60,
-    # Positif EN
-    'amazing': 0.90, 'wonderful': 0.85, 'recommend': 0.75,
-    'beautiful': 0.80, 'paradise': 0.90, 'stunning': 0.85,
-    # Positif Wolof
-    'dafa baax': 0.90, 'rafet': 0.80, 'baax': 0.85, 'yomb': 0.70,
-    'neex': 0.80, 'dafa neex': 0.85, 'dafa rafet': 0.85,
-    'yomb na': 0.75, 'fi neex': 0.80, 'bari nit': 0.60,
-    'jaam': 0.70, 'dafa baax lool': 0.95, 'ak yaakaar': 0.65,
-    'benn probleme': 0.50, 'am na solo': 0.75, 'professionnel': 0.60,
-    # Negatif FR
-    'decevant': -0.70, 'arnaque': -0.90, 'sale': -0.80,
-    'dechets': -0.70, 'cher': -0.50, 'insatisfait': -0.75,
-    # Negatif EN
-    'disappointed': -0.70, 'overpriced': -0.60, 'touts': -0.50,
-    'dirty': -0.80, 'rude': -0.75,
-    # Negatif Wolof
-    'dafa neka': -0.80, 'amul solo': -0.70,
-    'dafa bon': -0.80, 'metti': -0.65, 'dafa metti': -0.75,
-    'xamul': -0.55, 'toorop cher': -0.60, 'dafa daw': -0.50,
-    'amul barke': -0.65, 'loolu amul yaram': -0.80,
-}
-
-
 @udf(returnType=FloatType())
 def score_sentiment(texte: str) -> float:
-    """Calcule un score de sentiment [-1, 1] par correspondance lexicale."""
     if not texte:
         return 0.0
     t = texte.lower()
@@ -105,10 +82,11 @@ avis_df = (
     .load()
     .select(from_json(col('value').cast('string'), schema_avis).alias('d'))
     .select('d.*')
-    .withColumn('event_ts', current_timestamp())
+    # Utilisation du timestamp de l'evenement (pas l'heure d'ingestion)
+    .withColumn('event_ts', to_timestamp(col('timestamp')))
     # Privacy by Design : SHA-256 + suppression du PII
     .withColumn('user_secure', sha2(concat(col('user_id'), lit(SALT)), 256))
-    .drop('user_id', 'email_client')
+    .drop('user_id', 'email_client', 'timestamp')
     # NLP sentiment
     .withColumn('sentiment_score', score_sentiment(col('texte_avis')))
     .withColumn('sentiment_label',
@@ -150,10 +128,10 @@ ecomm_df = (
     .load()
     .select(from_json(col('value').cast('string'), schema_ecommerce).alias('d'))
     .select('d.*')
-    .withColumn('event_ts', current_timestamp())
+    .withColumn('event_ts', to_timestamp(col('timestamp')))
     # Privacy : anonymisation + suppression user_id
     .withColumn('user_secure', sha2(concat(col('user_id'), lit(SALT)), 256))
-    .drop('user_id')
+    .drop('user_id', 'timestamp')
 )
 
 # Query 1 : alertes reputation envoyees vers un topic Kafka dedie
@@ -164,7 +142,7 @@ q_reputation = (
     .format('kafka')
     .option('kafka.bootstrap.servers', KAFKA_SERVERS)
     .option('topic', 'teranga_alerts')
-    .option('checkpointLocation', '/tmp/teranga_rep_ckpt')
+    .option('checkpointLocation', f'{CHECKPOINT_BASE}/reputation')
     .outputMode('update')
     .start()
 )

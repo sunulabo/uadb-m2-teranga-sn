@@ -2,8 +2,8 @@
 # Validation des schemas de donnees avec Pandera - Teranga-SN Eq.12
 # Verifie les contraintes metier avant ingestion dans HBase/Hive
 
-import pandera as pa
-from pandera import Column, DataFrameSchema, Check
+import pandera.pandas as pa
+from pandera.pandas import Column, DataFrameSchema, Check
 import pandas as pd
 import logging
 
@@ -29,7 +29,11 @@ schema_avis = DataFrameSchema(
         ),
         'user_secure': Column(
             str,
-            checks=Check(lambda s: s.str.len() == 64, error='user_secure doit etre SHA-256 (64 hex)'),
+            checks=[
+                Check(lambda s: s.str.len() == 64, error='user_secure doit avoir 64 caracteres'),
+                Check(lambda s: s.str.match(r'^[0-9a-f]{64}$'),
+                      error='user_secure doit etre un hash SHA-256 hexadecimal minuscule'),
+            ],
             nullable=False,
         ),
         'destination': Column(
@@ -85,7 +89,11 @@ schema_ecommerce = DataFrameSchema(
     columns={
         'user_secure': Column(
             str,
-            checks=Check(lambda s: s.str.len() == 64, error='user_secure invalide'),
+            checks=[
+                Check(lambda s: s.str.len() == 64, error='user_secure doit avoir 64 caracteres'),
+                Check(lambda s: s.str.match(r'^[0-9a-f]{64}$'),
+                      error='user_secure doit etre un hash SHA-256 hexadecimal minuscule'),
+            ],
             nullable=False,
         ),
         'categorie': Column(

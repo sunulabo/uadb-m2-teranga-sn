@@ -2,29 +2,11 @@
 # Tests unitaires du scoring NLP - Teranga-SN Eq.12
 # Valide le comportement du lexique FR/EN/WO sans Spark
 
-import pytest
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
-# Lexique duplique ici pour tester sans PySpark
-LEXIQUE = {
-    'magnifique': 0.90, 'excellent': 0.90, 'superbe': 0.85,
-    'teranga': 0.80, 'chaleureux': 0.75, 'delicieux': 0.80,
-    'incontournable': 0.70, 'parfait': 0.85, 'sympa': 0.60,
-    'amazing': 0.90, 'wonderful': 0.85, 'recommend': 0.75,
-    'beautiful': 0.80, 'paradise': 0.90, 'stunning': 0.85,
-    'dafa baax': 0.90, 'rafet': 0.80, 'baax': 0.85, 'yomb': 0.70,
-    'neex': 0.80, 'dafa neex': 0.85, 'dafa rafet': 0.85,
-    'yomb na': 0.75, 'fi neex': 0.80, 'jaam': 0.70,
-    'dafa baax lool': 0.95, 'am na solo': 0.75,
-    'decevant': -0.70, 'arnaque': -0.90, 'sale': -0.80,
-    'dechets': -0.70, 'cher': -0.50, 'insatisfait': -0.75,
-    'professionnel': 0.60,
-    'disappointed': -0.70, 'overpriced': -0.60, 'touts': -0.50,
-    'dirty': -0.80, 'rude': -0.75,
-    'dafa neka': -0.80, 'amul solo': -0.70,
-    'dafa bon': -0.80, 'metti': -0.65, 'dafa metti': -0.75,
-    'xamul': -0.55, 'toorop cher': -0.60,
-    'amul barke': -0.65, 'loolu amul yaram': -0.80,
-}
+import pytest
+from lexique import LEXIQUE
 
 
 def score_sentiment(texte: str) -> float:

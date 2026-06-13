@@ -4,6 +4,7 @@
 
 import os
 import json
+import joblib
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 
@@ -23,10 +24,13 @@ MOIS_LABELS    = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
 
 def charger_modele():
     try:
-        import joblib
         return joblib.load(MODEL_PATH)
     except Exception:
         return None
+
+
+# Chargement unique au demarrage du serveur
+modele_data = charger_modele()
 
 
 def donnees_destinations():
@@ -88,23 +92,36 @@ def index():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data       = request.json
-    destination = data.get('destination', 'DAKAR')
-    mois        = int(data.get('mois', 1))
-    type_act    = data.get('type_activite', 'PLAGE')
-    note_moy    = float(data.get('note_moy', 4.0))
-    sentiment   = float(data.get('sentiment_moy', 0.3))
-    nationalite = data.get('nationalite', 'FR')
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Corps JSON requis (Content-Type: application/json)'}), 400
 
-    modele_data = charger_modele()
+    try:
+        destination = str(data.get('destination', 'DAKAR'))
+        mois        = int(data.get('mois', 1))
+        type_act    = str(data.get('type_activite', 'PLAGE'))
+        note_moy    = float(data.get('note_moy', 4.0))
+        sentiment   = float(data.get('sentiment_moy', 0.3))
+        nationalite = str(data.get('nationalite', 'FR'))
+    except (TypeError, ValueError) as exc:
+        return jsonify({'error': f'Parametre invalide : {exc}'}), 422
+
+    if mois not in range(1, 13):
+        return jsonify({'error': 'mois doit etre entre 1 et 12'}), 422
+    if not 1.0 <= note_moy <= 5.0:
+        return jsonify({'error': 'note_moy doit etre entre 1.0 et 5.0'}), 422
+    if not -1.0 <= sentiment <= 1.0:
+        return jsonify({'error': 'sentiment_moy doit etre entre -1.0 et 1.0'}), 422
 
     if modele_data:
-        import joblib
         rf        = modele_data['model']
         encodeurs = modele_data['encodeurs']
-        dest_enc  = encodeurs['destination'].transform([destination])[0]
-        nat_enc   = encodeurs['nationalite'].transform([nationalite])[0]
-        act_enc   = encodeurs['type_activite'].transform([type_act])[0]
+        try:
+            dest_enc = encodeurs['destination'].transform([destination])[0]
+            nat_enc  = encodeurs['nationalite'].transform([nationalite])[0]
+            act_enc  = encodeurs['type_activite'].transform([type_act])[0]
+        except ValueError as exc:
+            return jsonify({'error': f'Valeur inconnue par le modele : {exc}'}), 422
         X    = np.array([[dest_enc, nat_enc, act_enc, mois, note_moy, sentiment]])
         flux = int(rf.predict(X)[0])
         mode = 'Random Forest'

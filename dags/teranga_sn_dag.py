@@ -2,10 +2,10 @@
 # DAG Airflow MLOps Teranga-SN - Eq.12
 # Monitoring hebdomadaire : detection derive -> reentainement ou mise a jour dashboard
 
+import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.operators.dummy  import DummyOperator
-from airflow.utils.dates      import days_ago
+from airflow.operators.empty  import EmptyOperator
 from datetime import timedelta
 import subprocess
 import logging
@@ -70,35 +70,36 @@ def update_dashboard(**ctx):
         conn_hive  = hive.Connection(host='hive-metastore', port=10000, database='teranga_sn')
         conn_hbase = happybase.Connection('hbase', port=9090)
         conn_hbase.open()
+        try:
+            cur = conn_hive.cursor()
+            cur.execute(
+                'SELECT destination, nb_avis_total, note_moy, sentiment_moy, statut_reputation '
+                'FROM vue_destinations'
+            )
+            rows = cur.fetchall()
+            cur.close(); conn_hive.close()
 
-        cur = conn_hive.cursor()
-        cur.execute(
-            'SELECT destination, nb_avis_total, note_moy, sentiment_moy, statut_reputation '
-            'FROM vue_destinations'
-        )
-        rows = cur.fetchall()
-        cur.close(); conn_hive.close()
+            table = conn_hbase.table('teranga:alertes_reputation')
+            ts    = datetime.utcnow().isoformat().encode()
 
-        table = conn_hbase.table('teranga:alertes_reputation')
-        ts    = datetime.utcnow().isoformat().encode()
+            for dest, nb, note, sent, statut in rows:
+                if statut in ('ROUGE', 'ORANGE'):
+                    table.put(
+                        dest.encode(),
+                        {
+                            b'alerte:destination': dest.encode(),
+                            b'alerte:nb_avis':     str(nb).encode(),
+                            b'alerte:note':        str(round(note, 2)).encode(),
+                            b'alerte:sentiment':   str(round(sent, 3)).encode(),
+                            b'alerte:statut':      statut.encode(),
+                            b'alerte:ts':          ts,
+                        }
+                    )
+                    logger.info(f'Alerte HBase ecrite - {dest} : {statut}')
 
-        for dest, nb, note, sent, statut in rows:
-            if statut in ('ROUGE', 'ORANGE'):
-                table.put(
-                    dest.encode(),
-                    {
-                        b'alerte:destination': dest.encode(),
-                        b'alerte:nb_avis':     str(nb).encode(),
-                        b'alerte:note':        str(round(note, 2)).encode(),
-                        b'alerte:sentiment':   str(round(sent, 3)).encode(),
-                        b'alerte:statut':      statut.encode(),
-                        b'alerte:ts':          ts,
-                    }
-                )
-                logger.info(f'Alerte HBase ecrite - {dest} : {statut}')
-
-        conn_hbase.close()
-        logger.info('Dashboard mis a jour avec succes')
+            logger.info('Dashboard mis a jour avec succes')
+        finally:
+            conn_hbase.close()
 
     except Exception as exc:
         logger.error(f'Erreur update_dashboard : {exc}')
@@ -128,37 +129,33 @@ with DAG(
     dag_id='teranga_sn_monitoring',
     default_args=default_args,
     schedule_interval='0 7 * * 1',
-    start_date=days_ago(1),
+    start_date=pendulum.datetime(2025, 1, 1, tz='UTC'),
     catchup=False,
     tags=['teranga-sn', 'tourisme', 'ecommerce', 'mlops'],
     description='Monitoring hebdomadaire Teranga-SN : reputation + reentainement ML',
 ) as dag:
 
-    start  = DummyOperator(task_id='start')
-    end    = DummyOperator(task_id='end', trigger_rule='none_failed_min_one_success')
+    start  = EmptyOperator(task_id='start')
+    end    = EmptyOperator(task_id='end', trigger_rule='none_failed_min_one_success')
 
     branch = BranchPythonOperator(
         task_id='check_reputation',
         python_callable=check_reputation,
-        provide_context=True,
     )
 
     t_retrain  = PythonOperator(
         task_id='retrain_model',
         python_callable=retrain_model,
-        provide_context=True,
     )
 
     t_dashboard = PythonOperator(
         task_id='update_dashboard',
         python_callable=update_dashboard,
-        provide_context=True,
     )
 
     t_rapport = PythonOperator(
         task_id='generer_rapport_semaine',
         python_callable=generer_rapport_semaine,
-        provide_context=True,
         trigger_rule='none_failed_min_one_success',
     )
 

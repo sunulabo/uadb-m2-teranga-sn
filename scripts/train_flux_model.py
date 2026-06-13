@@ -22,8 +22,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger('teranga.ml')
 
 SEED       = 42
-MODEL_PATH = os.environ.get('MODEL_PATH', '/opt/models/rf_flux_touristique.pkl')
-MLFLOW_URI = os.environ.get('MLFLOW_TRACKING_URI', 'file:///opt/models/mlruns')
+MODEL_PATH   = os.environ.get('MODEL_PATH', '/opt/models/rf_flux_touristique.pkl')
+METRICS_PATH = os.path.join(os.path.dirname(MODEL_PATH), 'metriques_rf.json')
+MLFLOW_URI   = os.environ.get('MLFLOW_TRACKING_URI', 'file:///opt/models/mlruns')
 
 np.random.seed(SEED)
 
@@ -142,7 +143,7 @@ def entrainer_modele():
             'n_test':  len(X_test),
             'date_entrainement': datetime.utcnow().isoformat(),
         }
-        with open('/opt/models/metriques_rf.json', 'w') as f:
+        with open(METRICS_PATH, 'w') as f:
             json.dump(metriques, f, indent=2)
 
         return rf, rmse, r2

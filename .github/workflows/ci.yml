@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pandera pandas pytest
+          pip install pandera pandas pytest numpy scikit-learn joblib
 
       - name: Run tests
         run: pytest tests/ -v --tb=short

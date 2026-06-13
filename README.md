@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Teranga-SN - Intelligence Touristique et Economie Numerique
 
 **Eq.12 | Master 2 DSGL UADB Bambey | 2025-2026**
@@ -33,7 +32,7 @@
 
 ```bash
 # 1. Cloner le dépôt
-git clone https://github.com/pa-malick/uadb-m2-teranga-sn.git
+git clone https://github.com/sunulabo/uadb-m2-teranga-sn.git
 cd uadb-m2-teranga-sn
 
 # 2. Configurer les variables d'environnement
@@ -113,13 +112,14 @@ docker/
 nifi_templates/
   template_nifi_eq12.xml         # Template NiFi (4 processors, 2 topics)
 tests/
-  test_schemas.py                # 10 tests Pandera (schemas + PII)
-  test_streaming.py              # Tests unitaires scoring NLP
+  test_schemas.py                # 12 tests Pandera (schemas + PII + hex SHA-256)
+  test_streaming.py              # 11 tests unitaires scoring NLP FR/EN/WO
 models/
   metriques_rf.json              # Métriques Random Forest (RMSE, R², CV R²)
 .github/workflows/
-  ci.yml                         # CI GitHub Actions (pytest automatique)
-rapport_teranga_sn.docx          # Rapport final Word
+  ci.yml                         # CI GitHub Actions (23 tests automatiques)
+rapport/
+  rapport.pdf                    # Rapport final (5-7 pages)
 hive_setup.sql                   # Tables et vues Hive
 requirements.txt
 README.md
